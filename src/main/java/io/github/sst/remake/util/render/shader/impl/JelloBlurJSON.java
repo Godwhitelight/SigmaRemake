@@ -1,36 +1,21 @@
 package io.github.sst.remake.util.render.shader.impl;
 
-import net.minecraft.resource.Resource;
-import net.minecraft.resource.metadata.ResourceMetadataReader;
-import net.minecraft.util.Identifier;
-import org.jetbrains.annotations.Nullable;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
-public class JelloBlurJSON implements Resource {
-    @Override
-    public Identifier getId() {
-        return null;
-    }
+/**
+ * JelloBlurJSON - provides the blur shader JSON definition.
+ *
+ * In 1.16, this implemented the Resource interface. In 1.19+, Resource changed from an interface
+ * to a class, so we can no longer implement it. This is now a simple helper class that provides
+ * the blur shader JSON as an InputStream.
+ *
+ * TODO: Integrate with PostEffectProcessor when blur shader system is rewritten.
+ */
+public class JelloBlurJSON {
+    private static final String BLUR_JSON = "{\"targets\":[\"jelloswap\",\"jello\"],\"passes\":[{\"name\":\"blur\",\"intarget\":\"minecraft:main\",\"outtarget\":\"jelloswap\",\"uniforms\":[{\"name\":\"BlurDir\",\"values\":[1,0]},{\"name\":\"Radius\",\"values\":[20]}]},{\"name\":\"blur\",\"intarget\":\"jelloswap\",\"outtarget\":\"jello\",\"uniforms\":[{\"name\":\"BlurDir\",\"values\":[0,1]},{\"name\":\"Radius\",\"values\":[20]}]}]}";
 
-    @Override
     public InputStream getInputStream() {
-        String var3 = "{\"targets\":[\"jelloswap\",\"jello\"],\"passes\":[{\"name\":\"blur\",\"intarget\":\"minecraft:main\",\"outtarget\":\"jelloswap\",\"uniforms\":[{\"name\":\"BlurDir\",\"values\":[1,0]},{\"name\":\"Radius\",\"values\":[20]}]},{\"name\":\"blur\",\"intarget\":\"jelloswap\",\"outtarget\":\"jello\",\"uniforms\":[{\"name\":\"BlurDir\",\"values\":[0,1]},{\"name\":\"Radius\",\"values\":[20]}]}]}";
-        return new ByteArrayInputStream(var3.getBytes());
-    }
-
-    @Override
-    public @Nullable <T> T getMetadata(ResourceMetadataReader<T> metaReader) {
-        return null;
-    }
-
-    @Override
-    public String getResourcePackName() {
-        return "";
-    }
-
-    @Override
-    public void close() {
+        return new ByteArrayInputStream(BLUR_JSON.getBytes());
     }
 }

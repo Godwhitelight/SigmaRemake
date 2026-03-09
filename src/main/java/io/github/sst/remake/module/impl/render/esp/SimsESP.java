@@ -29,9 +29,9 @@ public class SimsESP extends SubModule {
         if (client.world == null) return;
 
         for (LivingEntity entity : getParent().getTargets()) {
-            double x = entity.lastRenderX + (entity.getX() - entity.lastRenderX) * (double) client.getTickDelta();
-            double y = entity.lastRenderY + (double) entity.getHeight() + (entity.getY() - entity.lastRenderY) * (double) client.getTickDelta();
-            double z = entity.lastRenderZ + (entity.getZ() - entity.lastRenderZ) * (double) client.getTickDelta();
+            double x = entity.lastRenderX + (entity.getX() - entity.lastRenderX) * (double) client.getRenderTickCounter().getTickDelta(true);
+            double y = entity.lastRenderY + (double) entity.getHeight() + (entity.getY() - entity.lastRenderY) * (double) client.getRenderTickCounter().getTickDelta(true);
+            double z = entity.lastRenderZ + (entity.getZ() - entity.lastRenderZ) * (double) client.getRenderTickCounter().getTickDelta(true);
             renderEntityTriangleIndicator(x, y, z, entity);
         }
     }

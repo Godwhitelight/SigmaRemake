@@ -10,7 +10,7 @@ import io.github.sst.remake.util.IMinecraft;
 import io.github.sst.remake.util.java.StringUtils;
 import net.minecraft.network.packet.s2c.login.LoginDisconnectS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
-import net.minecraft.network.packet.s2c.play.DisconnectS2CPacket;
+import net.minecraft.network.packet.s2c.common.DisconnectS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 
 import java.util.Arrays;
@@ -33,7 +33,7 @@ public final class BanTracker extends Tracker implements IMinecraft {
         }
 
         if (event.packet instanceof DisconnectS2CPacket) {
-            String reason = ((DisconnectS2CPacket) event.packet).getReason().getString();
+            String reason = ((DisconnectS2CPacket) event.packet).reason().getString();
             if (isBanMessage(reason)) {
                 long until = parseBanUntil(reason);
                 if (until == 0L) {
@@ -46,7 +46,7 @@ public final class BanTracker extends Tracker implements IMinecraft {
         }
 
         if (event.packet instanceof LoginDisconnectS2CPacket) {
-            String reason = ((LoginDisconnectS2CPacket) event.packet).getReason().getString();
+            String reason = ((LoginDisconnectS2CPacket) event.packet).reason().getString();
             if (isBanMessage(reason)) {
                 long until = parseBanUntil(reason);
                 if (until == 0L) {
@@ -64,7 +64,7 @@ public final class BanTracker extends Tracker implements IMinecraft {
     }
 
     private boolean checkBanMessage(GameMessageS2CPacket chat) {
-        String raw = chat.getMessage().getString();
+        String raw = chat.content().getString();
         if (raw == null) return false;
 
         return isBanMessage(raw);

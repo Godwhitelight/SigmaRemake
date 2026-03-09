@@ -13,7 +13,7 @@ import io.github.sst.remake.util.math.color.ClientColors;
 import io.github.sst.remake.util.math.color.ColorHelper;
 import io.github.sst.remake.util.render.RenderUtils;
 import io.github.sst.remake.util.render.font.FontUtils;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 
 public class OptionsPage extends GuiComponent {
     public OptionsPage(GuiComponent parent, String name, int x, int y, int width, int height) {
@@ -27,9 +27,9 @@ public class OptionsPage extends GuiComponent {
         this.addToList(openGui = new TextButton(this, "openGui", width / 2, height - 80, 300, 38, color, "Open Jello's Click GUI", FontUtils.HELVETICA_LIGHT_24));
         TextButton credits;
         this.addToList(credits = new TextButton(this, "credits", width / 2 - 100, height - 280, 200, 38, color, "Credits", FontUtils.HELVETICA_LIGHT_18));
-        openKeybinds.onClick((screen, mouseButton) -> OptionsScreen.showGUI(new KeybindsHolder(new LiteralText("Keybind Manager"))));
-        openGui.onClick((screen, mouseButton) -> OptionsScreen.showGUI(new ClickGuiHolder(new LiteralText("Click GUI"))));
-        credits.onClick((screen, mouseButton) -> OptionsScreen.showGUI(new CreditsHolder(new LiteralText("Jello Credits"))));
+        openKeybinds.onClick((screen, mouseButton) -> OptionsScreen.showGUI(new KeybindsHolder(Text.literal("Keybind Manager"))));
+        openGui.onClick((screen, mouseButton) -> OptionsScreen.showGUI(new ClickGuiHolder(Text.literal("Click GUI"))));
+        credits.onClick((screen, mouseButton) -> OptionsScreen.showGUI(new CreditsHolder(Text.literal("Jello Credits"))));
         Checkbox blurCheckbox;
         this.addToList(blurCheckbox = new Checkbox(this, "guiBlurCheckBox", width / 2 - 70, height - 220, 25, 25));
         blurCheckbox.setValue(Client.INSTANCE.configManager.guiBlur, false);

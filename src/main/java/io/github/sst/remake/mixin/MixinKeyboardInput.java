@@ -4,6 +4,8 @@ import io.github.sst.remake.event.impl.client.InputEvent;
 import net.minecraft.client.input.Input;
 import net.minecraft.client.input.KeyboardInput;
 import net.minecraft.client.option.GameOptions;
+import net.minecraft.util.PlayerInput;
+import net.minecraft.util.math.Vec2f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -18,47 +20,52 @@ public abstract class MixinKeyboardInput extends Input {
     private GameOptions settings;
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
-    private void onTickTail(boolean slowDown, CallbackInfo ci) {
+    private void onTickTail(CallbackInfo ci) {
         ci.cancel();
 
-        this.movementForward = 0.0f;
-        this.movementSideways = 0.0f;
+        // Read key states using 1.21 field names
+        boolean pressingForward = this.settings.forwardKey.isPressed();
+        boolean pressingBack = this.settings.backKey.isPressed();
+        boolean pressingLeft = this.settings.leftKey.isPressed();
+        boolean pressingRight = this.settings.rightKey.isPressed();
+        boolean jumping = this.settings.jumpKey.isPressed();
+        boolean sneaking = this.settings.sneakKey.isPressed();
 
-        this.pressingForward = this.settings.keyForward.isPressed();
-        this.pressingBack = this.settings.keyBack.isPressed();
-        this.pressingLeft = this.settings.keyLeft.isPressed();
-        this.pressingRight = this.settings.keyRight.isPressed();
+        // Calculate movement values
+        float movementForward = 0.0f;
+        float movementSideways = 0.0f;
 
-        if (this.pressingForward) {
-            ++this.movementForward;
+        if (pressingForward) {
+            ++movementForward;
+        }
+        if (pressingBack) {
+            --movementForward;
+        }
+        if (pressingLeft) {
+            ++movementSideways;
+        }
+        if (pressingRight) {
+            --movementSideways;
         }
 
-        if (this.pressingBack) {
-            --this.movementForward;
-        }
-
-        if (this.pressingLeft) {
-            ++this.movementSideways;
-        }
-
-        if (this.pressingRight) {
-            --this.movementSideways;
-        }
-
-        this.jumping = this.settings.keyJump.isPressed();
-        this.sneaking = this.settings.keySneak.isPressed();
-
-        InputEvent event = new InputEvent(this.movementForward, this.movementSideways, this.jumping, this.sneaking, 0.3F);
+        InputEvent event = new InputEvent(movementForward, movementSideways, jumping, sneaking, 0.3F);
         event.call();
 
-        this.movementSideways = event.strafe;
-        this.movementForward = event.forward;
-        this.jumping = event.jumping;
-        this.sneaking = event.sneaking;
+        movementSideways = event.strafe;
+        movementForward = event.forward;
+        jumping = event.jumping;
+        sneaking = event.sneaking;
 
-        if (this.sneaking) {
-            this.movementSideways *= event.sneakFactor;
-            this.movementForward *= event.sneakFactor;
+        if (sneaking) {
+            movementSideways *= event.sneakFactor;
+            movementForward *= event.sneakFactor;
         }
+
+        // Store results in the new 1.21 fields
+        this.playerInput = new PlayerInput(
+                pressingForward, pressingBack, pressingLeft, pressingRight,
+                jumping, sneaking, this.settings.sprintKey.isPressed()
+        );
+        this.movementVector = new Vec2f(movementSideways, movementForward);
     }
 }

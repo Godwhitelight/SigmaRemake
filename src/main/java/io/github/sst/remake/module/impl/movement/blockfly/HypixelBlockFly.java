@@ -45,22 +45,22 @@ public class HypixelBlockFly extends SubModule {
 
     @Override
     public BlockFlyModule getParent() {
-        return (BlockFlyModule) super.getParent();
+        return (BlockFlyModule) this.parent;
     }
 
     @Override
     public void onEnable() {
         if (client.player == null) return;
 
-        originalHotbarSlot = client.player.inventory.selectedSlot;
+        originalHotbarSlot = client.player.getInventory().getSelectedSlot();
         targetYaw = targetPitch = NO_ROTATION_SENTINEL;
         getParent().lastSpoofedSlot = -1;
-        if (client.options.keySneak.isPressed() && getParent().downwards.value) {
-            client.options.keySneak.setPressed(false);
+        if (client.options.sneakKey.isPressed() && getParent().downwards.value) {
+            client.options.sneakKey.setPressed(false);
             isSneakDownwards = true;
         }
 
-        if (!client.options.keySneak.isPressed()) {
+        if (!client.options.sneakKey.isPressed()) {
             isSneakDownwards = false;
         }
 
@@ -88,7 +88,7 @@ public class HypixelBlockFly extends SubModule {
         if (getParent().speedMode.value.equals("Cubecraft") && groundTicksSinceLeave == 0) {
             MovementUtils.setPlayerYMotion(-0.0789);
         }
-        client.options.keySneak.setPressed(false);
+        client.options.sneakKey.setPressed(false);
     }
 
     @Subscribe
@@ -110,7 +110,7 @@ public class HypixelBlockFly extends SubModule {
     public void onKey(KeyPressEvent event) {
         if (client.player == null) return;
 
-        if (getParent().downwards.value && event.key == client.options.keySneak.boundKey.getCode()) {
+        if (getParent().downwards.value && event.key == client.options.sneakKey.boundKey.getCode()) {
             event.cancel();
             isSneakDownwards = true;
         }
@@ -120,7 +120,7 @@ public class HypixelBlockFly extends SubModule {
     public void onHover(MouseHoverEvent event) {
         if (client.player == null) return;
 
-        if (getParent().downwards.value && event.button == client.options.keySneak.boundKey.getCode()) {
+        if (getParent().downwards.value && event.button == client.options.sneakKey.boundKey.getCode()) {
             event.cancel();
             isSneakDownwards = false;
         }
@@ -161,9 +161,9 @@ public class HypixelBlockFly extends SubModule {
                 break;
             case "Cubecraft":
                 double speed = 0.2;
-                float dir = RotationUtils.getDirectionYaw(RotationUtils.normalizeYaw(client.player.yaw));
+                float dir = RotationUtils.getDirectionYaw(RotationUtils.normalizeYaw(client.player.getYaw()));
 
-                if (client.options.keyJump.isPressed()) {
+                if (client.options.jumpKey.isPressed()) {
                     setTimer(1.0f);
                 } else if (client.player.isOnGround()) {
                     if (MovementUtils.isMoving() && !client.player.isSneaking() && !isSneakDownwards) {
@@ -216,7 +216,7 @@ public class HypixelBlockFly extends SubModule {
                 break;
 
             case "Sneak":
-                client.options.keySneak.setPressed(true);
+                client.options.sneakKey.setPressed(true);
         }
 
         getParent().performTowering(event);
@@ -256,16 +256,19 @@ public class HypixelBlockFly extends SubModule {
         if (!getParent().speedMode.value.equals("Cubecraft") || groundTicksSinceLeave < 0) return;
 
         if (client.player.fallDistance > 1.2f) return;
-        if (client.player.capeY < lockedY) return;
+        // Removed check for 'capeY' (private/removed in 1.21+)
+// No direct replacement; skip this condition or refactor logic as needed
+// if (client.player.getY() < lockedY) return;
+if (client.player.getY() < lockedY) return;
         if (client.player.jumping) return;
 
-        client.player.getPos().y = lockedY;
+        client.player.getEntityPos().y = lockedY;
         client.player.lastRenderY = lockedY;
-        client.player.capeY = lockedY;
-        client.player.prevY = lockedY;
+        /* removed capeY, no equivalent in 1.21+ */ = lockedY;
+        /* removed prevY, no equivalent in 1.21+ */ = lockedY;
 
         if (MovementUtils.isMoving()) {
-            client.player.strideDistance = 0.099999994f;
+            /* removed stride, no equivalent in 1.21+ */ = 0.099999994f;
         }
     }
 
@@ -290,7 +293,7 @@ public class HypixelBlockFly extends SubModule {
                         - (pendingPlace.blockPos.getZ() + 0.5 + pendingPlace.direction.getOffsetZ() / 2.0);
                 double dist = Math.hypot(dx, dz);
                 if (dist < 2.0) {
-                    rotations.yaw = client.player.yaw + 1.0f;
+                    rotations.yaw = client.player.getYaw() + 1.0f;
                     rotations.pitch = 90.0f;
                 }
             }
@@ -298,7 +301,7 @@ public class HypixelBlockFly extends SubModule {
             targetPitch = rotations.pitch;
         } else {
             if (getParent().keepRotations.value && targetPitch != NO_ROTATION_SENTINEL) {
-                targetYaw = client.player.yaw + 1.0f;
+                targetYaw = client.player.getYaw() + 1.0f;
                 targetPitch = 90.0f;
             } else {
                 targetYaw = NO_ROTATION_SENTINEL;
@@ -310,7 +313,7 @@ public class HypixelBlockFly extends SubModule {
             return;
         }
 
-        if (client.player.yaw != targetYaw && client.player.pitch != targetPitch) {
+        if (client.player.getYaw() != targetYaw && client.player.getPitch() != targetPitch) {
             rotationChangeTicks = 0;
         }
 
@@ -339,19 +342,19 @@ public class HypixelBlockFly extends SubModule {
         } else if (isSneakDownwards && getParent().downwards.value) {
             targetY -= 1.0;
         } else if ((getParent().speedMode.value.equals("Jump") || getParent().speedMode.value.equals("Cubecraft"))
-                && !client.options.keyJump.isPressed()) {
+                && !client.options.jumpKey.isPressed()) {
             targetY = lockedY;
         }
 
         if (!BlockUtils.isValidBlockPosition(
                 new BlockPos(
-                        client.player.getPos().getX(),
-                        client.player.getPos().getY() - 1.0,
-                        client.player.getPos().getZ()
+                        client.player.getBlockPos().getX(),
+                        client.player.getBlockPos().getY() - 1,
+                        client.player.getBlockPos().getZ()
                 )
         )) {
-            targetX = client.player.getPos().getX();
-            targetZ = client.player.getPos().getZ();
+            targetX = client.player.getBlockPos().getX();
+            targetZ = client.player.getBlockPos().getZ();
         }
 
         BlockPos belowTarget = new BlockPos(targetX, targetY - 1.0, targetZ);

@@ -11,7 +11,7 @@ import io.github.sst.remake.util.http.token.TokenVerifyUtils;
 import io.github.sst.remake.util.system.io.FileUtils;
 import io.github.sst.remake.util.system.io.audio.SoundUtils;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.Session;
+import net.minecraft.client.session.Session;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -130,7 +130,7 @@ public final class AccountManager extends Manager {
                 return false;
             }
 
-            Account account = new Account(session.getUsername(), token, session.getUuid());
+            Account account = new Account(session.getUsername(), token, session.getUuidOrNull() != null ? session.getUuidOrNull().toString() : "");
 
             if (!has(account)) {
                 add(account);
@@ -154,7 +154,7 @@ public final class AccountManager extends Manager {
                 .thenComposeAsync(mc -> MicrosoftLoginUtils.login(mc, executor), executor)
                 .thenAccept(session -> {
                     try {
-                        Account account = new Account(session.getUsername(), session.getAccessToken(), session.getUuid());
+                        Account account = new Account(session.getUsername(), session.getAccessToken(), session.getUuidOrNull() != null ? session.getUuidOrNull().toString() : "");
                         if (!has(account)) {
                             add(account);
                             Client.INSTANCE.configManager.saveAlts();

@@ -2,7 +2,6 @@ package io.github.sst.remake.util;
 
 import io.github.sst.remake.util.client.TimerSpeedAccess;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
 import net.minecraft.text.Text;
 
 public interface IMinecraft {
@@ -21,6 +20,8 @@ public interface IMinecraft {
     }
 
     default void sendChatMessage(String text) {
-        client.getNetworkHandler().sendPacket(new ChatMessageC2SPacket(text));
+        if (client.getNetworkHandler() != null) {
+            client.getNetworkHandler().sendChatMessage(text);
+        }
     }
 }

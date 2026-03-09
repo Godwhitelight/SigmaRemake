@@ -1,7 +1,5 @@
 package io.github.sst.remake.gui.screen.clickgui.math;
 
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.sst.remake.gui.framework.core.GuiComponent;
 import io.github.sst.remake.gui.framework.core.InteractiveWidget;
 import io.github.sst.remake.util.math.anim.AnimationUtils;
@@ -9,6 +7,7 @@ import io.github.sst.remake.util.math.color.ClientColors;
 import io.github.sst.remake.util.math.color.ColorHelper;
 import io.github.sst.remake.util.math.vec.VecUtils;
 import io.github.sst.remake.util.math.vec.Vector2d;
+import io.github.sst.remake.util.render.RenderCompat;
 import io.github.sst.remake.util.render.RenderUtils;
 import org.lwjgl.opengl.GL11;
 
@@ -123,13 +122,12 @@ public class BezierCurve extends InteractiveWidget {
         GL11.glColor4d(0.0, 0.0, 0.0, 0.6F * partialTicks);
         GL11.glAlphaFunc(519, 0.0F);
 
-        RenderSystem.enableBlend();
-        RenderSystem.disableTexture();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SrcFactor.SRC_ALPHA,
-                GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA,
-                GlStateManager.SrcFactor.ONE,
-                GlStateManager.DstFactor.ZERO
+        RenderCompat.enableBlend();
+        RenderCompat.blendFuncSeparate(
+                GL11.GL_SRC_ALPHA,
+                GL11.GL_ONE_MINUS_SRC_ALPHA,
+                GL11.GL_ONE,
+                GL11.GL_ZERO
         );
 
         GL11.glEnable(2848);
@@ -163,8 +161,7 @@ public class BezierCurve extends InteractiveWidget {
         );
         GL11.glEnd();
 
-        RenderSystem.disableBlend();
-        RenderSystem.enableTexture();
+        RenderCompat.disableBlend();
 
         GL11.glPopMatrix();
 

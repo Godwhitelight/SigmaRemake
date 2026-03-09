@@ -4,6 +4,9 @@ import io.github.sst.remake.event.Statable;
 import lombok.AllArgsConstructor;
 
 public class MotionEvent extends Statable {
+    public boolean isOnGround() {
+        return this.onGround;
+    }
     public double x, y, z;
     public final float yaw, pitch;
     public boolean onGround;

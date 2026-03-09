@@ -10,10 +10,9 @@ import io.github.sst.remake.util.render.font.FontUtils;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
 import net.minecraft.item.Items;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,12 +49,12 @@ public class BlockPicker extends InteractiveWidget {
             this.addToList(this.itemScrollPanel);
 
             List<Item> allItems = new ArrayList<>();
-            for (Item item : Registry.ITEM) {
+            for (Item item : Registries.ITEM) {
                 allItems.add(item);
             }
 
-            allItems.add(new BlockItem(Blocks.NETHER_PORTAL, new Item.Settings().group(ItemGroup.MISC)));
-            allItems.add(new BlockItem(Blocks.END_PORTAL, new Item.Settings().group(ItemGroup.MISC)));
+            allItems.add(new BlockItem(Blocks.NETHER_PORTAL, new Item.Settings()));
+            allItems.add(new BlockItem(Blocks.END_PORTAL, new Item.Settings()));
 
             for (Item item : InventoryUtils.sortItemsBySearchPriority(allItems, searchTerm)) {
                 if (item == Items.AIR) {
@@ -65,7 +64,7 @@ public class BlockPicker extends InteractiveWidget {
                     continue;
                 }
 
-                Identifier itemId = Registry.ITEM.getId(item);
+                Identifier itemId = Registries.ITEM.getId(item);
                 String selectionId = InventoryUtils.resolveSelectionId(item, itemId);
 
                 BlockItemButton button = new BlockItemButton(

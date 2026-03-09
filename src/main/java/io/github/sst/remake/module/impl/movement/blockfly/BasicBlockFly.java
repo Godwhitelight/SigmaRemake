@@ -54,14 +54,14 @@ public class BasicBlockFly extends SubModule  {
 
     @Override
     public BlockFlyModule getParent() {
-        return (BlockFlyModule) super.getParent();
+        return (BlockFlyModule) this.parent;
     }
 
     @Override
     public void onEnable() {
         if (client.player == null) return;
 
-        originalHotbarSlot = client.player.inventory.selectedSlot;
+        originalHotbarSlot = client.player.getInventory().getSelectedSlot();
         targetYaw = targetPitch = NO_ROTATION_SENTINEL;
         getParent().lastSpoofedSlot = -1;
 
@@ -87,7 +87,7 @@ public class BasicBlockFly extends SubModule  {
 
         MovementUtils.strafe(MovementUtils.getSpeed() * 0.9);
         setTimer(1.0f);
-        client.options.keySneak.setPressed(false);
+        client.options.sneakKey.setPressed(false);
         eagleTimer.reset();
         eagleLastShouldSneak = false;
         resetVulcanState();
@@ -153,7 +153,7 @@ public class BasicBlockFly extends SubModule  {
         }
 
         if (!handledSneak) {
-            client.options.keySneak.setPressed(autoSneak);
+            client.options.sneakKey.setPressed(autoSneak);
         }
         getParent().performTowering(event);
     }
@@ -236,19 +236,19 @@ public class BasicBlockFly extends SubModule  {
                 && client.player.fallDistance > 1.0f
                 && RaytraceUtils.rayTrace(0.0f, 90.0f, 3.0f).getType() == HitResult.Type.MISS) {
             targetY += Math.min(client.player.getVelocity().y * 2.0, 4.0);
-        } else if (movementMode.value.equals("Jump") && !client.options.keyJump.isPressed()) {
+        } else if (movementMode.value.equals("Jump") && !client.options.jumpKey.isPressed()) {
             targetY = lockedY;
         }
 
         if (!BlockUtils.isValidBlockPosition(
                 new BlockPos(
-                        client.player.getPos().getX(),
-                        client.player.getPos().getY() - 1.0,
-                        client.player.getPos().getZ()
+                        client.player.getEntityPos().getX(),
+                        client.player.getEntityPos().getY() - 1.0,
+                        client.player.getEntityPos().getZ()
                 )
         )) {
-            targetX = client.player.getPos().getX();
-            targetZ = client.player.getPos().getZ();
+            targetX = client.player.getEntityPos().getX();
+            targetZ = client.player.getZ();
         }
 
         BlockPos belowTarget = new BlockPos(targetX, targetY - 1.0, targetZ);
@@ -294,13 +294,13 @@ public class BasicBlockFly extends SubModule  {
         }
 
         if (shouldSneak) {
-            client.options.keySneak.setPressed(true);
+            client.options.sneakKey.setPressed(true);
             return;
         }
 
         long delay = Math.max(0L, Math.round(eagleSneakDelay.value));
         if (eagleTimer.hasElapsed(delay)) {
-            client.options.keySneak.setPressed(false);
+            client.options.sneakKey.setPressed(false);
         }
     }
 
@@ -335,7 +335,7 @@ public class BasicBlockFly extends SubModule  {
         }
 
         boolean shouldSneak = client.player.isOnGround() && isOnEdge() && vulcanSneakTicks > 0;
-        client.options.keySneak.setPressed(shouldSneak);
+        client.options.sneakKey.setPressed(shouldSneak);
         if (shouldSneak) {
             vulcanSneakTicks--;
         }

@@ -2,30 +2,29 @@ package io.github.sst.remake.util.http;
 
 import com.sun.net.httpserver.HttpExchange;
 import io.github.sst.remake.Client;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.ParseException;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 
 public class NetUtils {
     public static final String USER_AGENT = "SigmaRemake/" + Client.VERSION;
 
-    public static CloseableHttpClient getHttpClient() {
-        return HttpClientBuilder.create()
-                .setUserAgent(USER_AGENT)
-                .build();
+    private static final HttpClient SHARED_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(14))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
+
+    public static HttpClient getHttpClient() {
+        return SHARED_CLIENT;
     }
 
     public static InputStream getInputStreamFromURL(String urlString) throws IOException {
@@ -44,15 +43,17 @@ public class NetUtils {
     }
 
     public static String getStringFromURL(String urlString) {
-        CloseableHttpClient client = HttpClients.createDefault();
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(urlString))
+                    .timeout(Duration.ofSeconds(14))
+                    .header("User-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+                    .GET()
+                    .build();
 
-        HttpGet httpGet = new HttpGet(urlString);
-        httpGet.addHeader("ChatCommandExecutor-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)");
-
-        try (CloseableHttpResponse response = client.execute(httpGet)) {
-            HttpEntity entity = response.getEntity();
-            return entity == null ? "" : EntityUtils.toString(entity);
-        } catch (IOException | ParseException e) {
+            HttpResponse<String> response = SHARED_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.body() != null ? response.body() : "";
+        } catch (Exception e) {
             return "";
         }
     }
@@ -85,7 +86,7 @@ public class NetUtils {
                 return;
             }
 
-            byte[] response = IOUtils.toByteArray(stream);
+            byte[] response = stream.readAllBytes();
             exchange.getResponseHeaders().add("Content-Type", getContentType(path));
             exchange.sendResponseHeaders(200, response.length);
             exchange.getResponseBody().write(response);

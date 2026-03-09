@@ -58,7 +58,7 @@ public class BanEntry extends Widget {
             // Lazy-load server icon + blurred banner
             if (this.serverInfo != null && this.serverBannerTexture == null) {
                 try {
-                    BufferedImage decodedIcon = ImageUtils.decodeBase64Image(this.serverInfo.getIcon());
+                    BufferedImage decodedIcon = ImageUtils.decodeBase64Image(org.apache.commons.codec.binary.Base64.encodeBase64String(this.serverInfo.getFavicon()));
                     if (decodedIcon != null) {
                         this.serverIconTexture = ImageUtils.createTexture("servericon", decodedIcon);
                         this.serverBannerTexture = ImageUtils.createTexture(
@@ -90,13 +90,13 @@ public class BanEntry extends Widget {
             int centerX = this.width / 2;
             int centerY = this.height / 2;
 
-            if (this.hoverPulseAnim.getDirection() == AnimationUtils.Direction.FORWARDS) {
+            if (this.hoverPulseAnim.direction == AnimationUtils.Direction.FORWARDS) {
                 hoverBackEase = QuadraticEasing.easeInQuad(this.hoverPulseAnim.calcPercent(), 0.0F, 1.0F, 1.0F);
             }
 
-            GL11.glTranslatef((float) (this.getX() + centerX), (float) (this.getY() + centerY), 0.0F);
+            GL11.glTranslatef((float) (this.x + centerX), (float) (this.y + centerY), 0.0F);
             GL11.glScaled(1.0 + 0.4 * (double) hoverBackEase, 1.0 + 0.4 * (double) hoverBackEase, 0.0);
-            GL11.glTranslatef((float) (-this.getX() - centerX), (float) (-this.getY() - centerY), 0.0F);
+            GL11.glTranslatef((float) (-this.x - centerX), (float) (-this.y - centerY), 0.0F);
 
             if (this.serverBannerTexture != null) {
                 RenderUtils.drawImage(
@@ -139,16 +139,16 @@ public class BanEntry extends Widget {
         GL11.glPushMatrix();
 
         float iconScaleEase = EasingFunctions.easeOutBack(this.hoverPulseAnim.calcPercent(), 0.0F, 1.0F, 1.0F);
-        if (this.hoverPulseAnim.getDirection() == AnimationUtils.Direction.FORWARDS) {
+        if (this.hoverPulseAnim.direction == AnimationUtils.Direction.FORWARDS) {
             iconScaleEase = QuadraticEasing.easeInQuad(this.hoverPulseAnim.calcPercent(), 0.0F, 1.0F, 1.0F);
         }
 
-        GL11.glTranslatef((float) (this.getX() + 44), (float) (this.getY() + 44), 0.0F);
+        GL11.glTranslatef((float) (this.x + 44), (float) (this.y + 44), 0.0F);
         GL11.glScaled(1.0 + 0.1 * (double) iconScaleEase, 1.0 + 0.1 * (double) iconScaleEase, 0.0);
-        GL11.glTranslatef((float) (-this.getX() - 44), (float) (-this.getY() - 44), 0.0F);
+        GL11.glTranslatef((float) (-this.x - 44), (float) (-this.y - 44), 0.0F);
 
         if (this.serverIconTexture == null) {
-            MinecraftClient.getInstance().getTextureManager().bindTexture(new Identifier("textures/misc/unknown_server.png"));
+
             RenderUtils.drawTexturedQuad(
                     (float) (this.x + 12),
                     (float) (this.y + 12),
@@ -186,13 +186,13 @@ public class BanEntry extends Widget {
         GL11.glPushMatrix();
 
         float infoScaleEase = EasingFunctions.easeOutBack(this.hoverPulseAnim.calcPercent(), 0.0F, 1.0F, 1.0F);
-        if (this.hoverPulseAnim.getDirection() == AnimationUtils.Direction.FORWARDS) {
+        if (this.hoverPulseAnim.direction == AnimationUtils.Direction.FORWARDS) {
             infoScaleEase = QuadraticEasing.easeInQuad(this.hoverPulseAnim.calcPercent(), 0.0F, 1.0F, 1.0F);
         }
 
-        GL11.glTranslatef((float) (this.getX() + 76), (float) (this.getY() + 44), 0.0F);
+        GL11.glTranslatef((float) (this.x + 76), (float) (this.y + 44), 0.0F);
         GL11.glScaled(1.0 - 0.1 * (double) infoScaleEase, 1.0 - 0.1 * (double) infoScaleEase, 0.0);
-        GL11.glTranslatef((float) (-this.getX() - 76), (float) (-this.getY() - 44), 0.0F);
+        GL11.glTranslatef((float) (-this.x - 76), (float) (-this.y - 44), 0.0F);
 
         String displayName;
         if (this.serverInfo != null) {

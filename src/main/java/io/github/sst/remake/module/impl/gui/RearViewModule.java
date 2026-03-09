@@ -1,6 +1,5 @@
 package io.github.sst.remake.module.impl.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.sst.remake.Client;
 import io.github.sst.remake.data.bus.Subscribe;
 import io.github.sst.remake.event.impl.client.RenderClient2DEvent;
@@ -13,13 +12,12 @@ import io.github.sst.remake.setting.impl.SliderSetting;
 import io.github.sst.remake.util.game.combat.RotationUtils;
 import io.github.sst.remake.util.math.anim.AnimationUtils;
 import io.github.sst.remake.util.math.vec.VecUtils;
+import io.github.sst.remake.util.render.RenderCompat;
 import io.github.sst.remake.util.render.RenderUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gl.SimpleFramebuffer;
+import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Util;
@@ -55,8 +53,8 @@ public class RearViewModule extends Module {
     @Subscribe
     public void onTick(ClientPlayerTickEvent event) {
         if (rearViewFramebuffer != null
-                && (rearViewFramebuffer.viewportWidth != client.getWindow().getFramebufferWidth()
-                || rearViewFramebuffer.viewportHeight != client.getWindow().getFramebufferHeight())) {
+                && (rearViewFramebuffer.textureWidth != client.getWindow().getFramebufferWidth()
+                || rearViewFramebuffer.textureHeight != client.getWindow().getFramebufferHeight())) {
             rebuild();
         }
 
@@ -131,7 +129,7 @@ public class RearViewModule extends Module {
         int scaledPadding = (int) (padding * Client.INSTANCE.screenManager.scaleFactor);
         int scaledYOffset = (int) (yOffset * Client.INSTANCE.screenManager.scaleFactor);
 
-        RenderSystem.pushMatrix();
+        RenderCompat.pushMatrix();
         blitFramebufferToScreen(
                 rearViewFramebuffer,
                 scaledWidth,
@@ -139,13 +137,13 @@ public class RearViewModule extends Module {
                 client.getWindow().getFramebufferWidth() - scaledPadding - scaledWidth,
                 client.getWindow().getFramebufferHeight() + scaledYOffset
         );
-        RenderSystem.popMatrix();
+        RenderCompat.popMatrix();
 
         // Restore UI projection after custom ortho/viewport.
-        RenderSystem.clear(256, MinecraftClient.IS_SYSTEM_MAC);
-        RenderSystem.matrixMode(5889);
-        RenderSystem.loadIdentity();
-        RenderSystem.ortho(
+        RenderCompat.clear(256, MinecraftClient.IS_SYSTEM_MAC);
+        RenderCompat.matrixMode(5889);
+        RenderCompat.loadIdentity();
+        RenderCompat.ortho(
                 0.0,
                 (double) client.getWindow().getFramebufferWidth() / client.getWindow().getScaleFactor(),
                 (double) client.getWindow().getFramebufferHeight() / client.getWindow().getScaleFactor(),
@@ -153,17 +151,20 @@ public class RearViewModule extends Module {
                 1000.0,
                 3000.0
         );
-        RenderSystem.matrixMode(5888);
-        RenderSystem.loadIdentity();
-        RenderSystem.translatef(0.0F, 0.0F, -2000.0F);
+        RenderCompat.matrixMode(5888);
+        RenderCompat.loadIdentity();
+        RenderCompat.translatef(0.0F, 0.0F, -2000.0F);
         GL11.glScaled(
                 1.0 / client.getWindow().getScaleFactor() * (double) Client.INSTANCE.screenManager.scaleFactor,
                 1.0 / client.getWindow().getScaleFactor() * (double) Client.INSTANCE.screenManager.scaleFactor,
                 1.0
         );
 
-        RenderSystem.viewport(0, 0, client.getWindow().getFramebufferWidth(), client.getWindow().getFramebufferHeight());
-        client.getFramebuffer().beginWrite(true);
+        RenderCompat.viewport(0, 0, client.getWindow().getFramebufferWidth(), client.getWindow().getFramebufferHeight());
+        // In 1.21, Framebuffer.beginWrite(boolean) is removed.
+        // The main framebuffer is automatically bound by the rendering pipeline.
+        // We use blitToScreen() to ensure our framebuffer is displayed.
+        rearViewFramebuffer.blitToScreen(client.getWindow().getFramebufferWidth(), client.getWindow().getFramebufferHeight());
     }
 
     @Subscribe
@@ -182,36 +183,37 @@ public class RearViewModule extends Module {
             return;
         }
 
-        rearViewFramebuffer.beginWrite(true);
-        RenderSystem.clear(16640, false);
-        RenderSystem.enableTexture();
-        RenderSystem.enableColorMaterial();
-        RenderSystem.enableDepthTest();
+        // In 1.21, Framebuffer.beginWrite()/endWrite() are removed.
+        // The rendering pipeline manages framebuffer binding differently now.
+        // We clear the framebuffer and set up GL state manually.
+        GL11.glBindFramebuffer(GL11.GL_FRAMEBUFFER, 0); // Will be rebound by render call
+        RenderCompat.clear(16640, false);
+        RenderCompat.enableDepthTest();
         GL11.glAlphaFunc(519, 0.0F);
 
-        float originalYaw = client.player.yaw;
-        double originalFov = client.options.fov;
+        float originalYaw = client.player.getYaw();
+        int originalFov = client.options.getFov().getValue();
         boolean originalRenderHand = client.gameRenderer.renderHand;
         Framebuffer originalOutlineFbo = client.worldRenderer.entityOutlinesFramebuffer;
 
         try {
             RENDERING_REAR_VIEW = true;
-            client.player.yaw += 180.0F;
-            client.options.fov = 114.0;
+            client.player.setYaw(client.player.getYaw() + 180.0F);
+            client.options.getFov().setValue(114);
             client.gameRenderer.renderHand = false;
             client.worldRenderer.entityOutlinesFramebuffer = null;
 
-            client.gameRenderer.renderWorld(event.tickDelta, Util.getMeasuringTimeNano(), new MatrixStack());
+            // In 1.21, renderWorld takes RenderTickCounter instead of (float, long, MatrixStack)
+            client.gameRenderer.renderWorld(client.getRenderTickCounter());
         } finally {
             RENDERING_REAR_VIEW = false;
             client.worldRenderer.entityOutlinesFramebuffer = originalOutlineFbo;
             client.gameRenderer.renderHand = originalRenderHand;
-            client.options.fov = originalFov;
-            client.player.yaw = originalYaw;
-            rearViewFramebuffer.endWrite();
+            client.options.getFov().setValue(originalFov);
+            client.player.setYaw(originalYaw);
         }
 
-        client.getFramebuffer().beginWrite(true);
+        // In 1.21, no need to call beginWrite on main framebuffer — handled by pipeline
     }
 
     private boolean isEntityWithinViewAngle(LivingEntity targetEntity) {
@@ -222,64 +224,71 @@ public class RearViewModule extends Module {
                 client.player.getZ()
         )[0];
 
-        return RotationUtils.getWrappedAngleDifference(client.player.yaw, yawToTarget) <= 90.0F;
+        return RotationUtils.getWrappedAngleDifference(client.player.getYaw(), yawToTarget) <= 90.0F;
     }
 
     private void blitFramebufferToScreen(Framebuffer source, int width, int height, double posX, double posY) {
         posY = posY - (double) client.getWindow().getFramebufferHeight() + (double) height;
 
-        RenderSystem.colorMask(true, true, true, false);
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
+        RenderCompat.colorMask(true, true, true, false);
+        RenderCompat.disableDepthTest();
+        RenderCompat.depthMask(false);
 
-        RenderSystem.matrixMode(5889);
-        RenderSystem.loadIdentity();
-        RenderSystem.ortho(0.0, (double) width + posX, height, 0.0, 1000.0, 3000.0);
+        RenderCompat.matrixMode(5889);
+        RenderCompat.loadIdentity();
+        RenderCompat.ortho(0.0, (double) width + posX, height, 0.0, 1000.0, 3000.0);
 
-        RenderSystem.matrixMode(5888);
-        RenderSystem.loadIdentity();
-        RenderSystem.translatef(0.0F, 0.0F, -2000.0F);
+        RenderCompat.matrixMode(5888);
+        RenderCompat.loadIdentity();
+        RenderCompat.translatef(0.0F, 0.0F, -2000.0F);
 
-        RenderSystem.viewport(0, 0, width + (int) posX, height - (int) posY);
+        RenderCompat.viewport(0, 0, width + (int) posX, height - (int) posY);
 
-        RenderSystem.enableTexture();
-        RenderSystem.disableLighting();
-        RenderSystem.disableAlphaTest();
-        RenderSystem.disableBlend();
-        RenderSystem.enableColorMaterial();
-        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+        RenderCompat.enableTexture();
+        RenderCompat.disableLighting();
+        RenderCompat.disableAlphaTest();
+        RenderCompat.disableBlend();
+        RenderCompat.enableColorMaterial();
+        RenderCompat.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 
-        source.beginRead();
+        // In 1.21, Framebuffer.beginRead()/endRead() are removed.
+        // Instead, we bind the texture directly via GL.
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, source.getColorAttachment());
 
         float w = (float) width;
         float h = (float) height;
-        float uMax = (float) source.viewportWidth / (float) source.textureWidth;
-        float vMax = (float) source.viewportHeight / (float) source.textureHeight;
+        float uMax = (float) source.textureWidth / (float) source.textureWidth; // 1.0
+        float vMax = (float) source.textureHeight / (float) source.textureHeight; // 1.0
 
-        Tessellator tessellator = RenderSystem.renderThreadTesselator();
-        BufferBuilder buffer = tessellator.getBuffer();
+        GL11.glBegin(GL11.GL_QUADS);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        GL11.glTexCoord2f(0.0F, 0.0F);
+        GL11.glVertex3d(posX, (double) h + posY, 0.0);
+        GL11.glTexCoord2f(uMax, 0.0F);
+        GL11.glVertex3d((double) w + posX, (double) h + posY, 0.0);
+        GL11.glTexCoord2f(uMax, vMax);
+        GL11.glVertex3d((double) w + posX, posY, 0.0);
+        GL11.glTexCoord2f(0.0F, vMax);
+        GL11.glVertex3d(posX, posY, 0.0);
+        GL11.glEnd();
 
-        buffer.begin(7, VertexFormats.POSITION_COLOR_TEXTURE);
-        buffer.vertex(posX, (double) h + posY, 0.0).color(255, 255, 255, 255).texture(0.0F, 0.0F).next();
-        buffer.vertex((double) w + posX, (double) h + posY, 0.0).color(255, 255, 255, 255).texture(uMax, 0.0F).next();
-        buffer.vertex((double) w + posX, posY, 0.0).color(255, 255, 255, 255).texture(uMax, vMax).next();
-        buffer.vertex(posX, posY, 0.0).color(255, 255, 255, 255).texture(0.0F, vMax).next();
-        tessellator.draw();
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
 
-        source.endRead();
-
-        RenderSystem.depthMask(true);
-        RenderSystem.colorMask(true, true, true, true);
-        RenderSystem.enableAlphaTest();
-        RenderSystem.enableBlend();
+        RenderCompat.depthMask(true);
+        RenderCompat.colorMask(true, true, true, true);
+        RenderCompat.enableAlphaTest();
+        RenderCompat.enableBlend();
     }
 
     private void rebuild() {
-        rearViewFramebuffer = new Framebuffer(
+        // In 1.21, Framebuffer constructor changed.
+        // Use SimpleFramebuffer(String name, int width, int height, boolean useDepthAttachment)
+        rearViewFramebuffer = new SimpleFramebuffer(
+                "rearview",
                 client.getWindow().getFramebufferWidth(),
                 client.getWindow().getFramebufferHeight(),
-                true,
-                MinecraftClient.IS_SYSTEM_MAC
+                true
         );
         rearViewFramebuffer.setClearColor(1.0F, 1.0F, 1.0F, 1.0F);
     }

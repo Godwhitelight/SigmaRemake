@@ -9,7 +9,7 @@ import io.github.sst.remake.util.game.world.data.MapRegion;
 import io.github.sst.remake.util.math.color.ColorHelper;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.MapColor;
-import net.minecraft.block.Material;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -211,24 +211,40 @@ public class WaypointUtils implements IMinecraft {
         return loaded != null;
     }
 
+    /**
+     * Get the color for a waypoint map at the given block position.
+     *
+     * In 1.20+, Material class was removed. We now use direct block/fluid state checks:
+     * - Material.AIR -> state.isAir()
+     * - Material.SNOW_BLOCK -> state.isOf(Blocks.SNOW_BLOCK) || state.isOf(Blocks.SNOW)
+     * - Material.LAVA -> state.getFluidState().isOf(Fluids.LAVA)
+     * - Material.WATER -> state.getFluidState().isOf(Fluids.WATER)
+     * - material.getColor() -> state.getMapColor(world, pos)
+     */
     public static int getWaypointHeight(BlockPos var1, boolean var2) {
-        if (client.world.getBlockState(var1).getBlock() == Blocks.AIR) {
+        if (client.world.getBlockState(var1).isAir()) {
             var1 = var1.down();
         }
 
-        MapColor var5 = client.world.getBlockState(var1).getMaterial().getColor();
+        MapColor var5 = client.world.getBlockState(var1).getMapColor(client.world, var1);
         int var6 = var5.color;
-        Material var7 = client.world.getBlockState(var1.up()).getMaterial();
-        if (var7 != Material.SNOW_BLOCK) {
-            if (var7 == Material.LAVA) {
-                var6 = var7.getColor().color;
+
+        // Check block above for snow/lava
+        net.minecraft.block.BlockState aboveState = client.world.getBlockState(var1.up());
+        boolean isSnow = aboveState.isOf(Blocks.SNOW_BLOCK) || aboveState.isOf(Blocks.SNOW);
+        boolean isLava = aboveState.getFluidState().isOf(Fluids.LAVA);
+
+        if (!isSnow) {
+            if (isLava) {
+                var6 = aboveState.getMapColor(client.world, var1.up()).color;
             }
         } else {
             var6 = -1;
         }
 
         if (client.world.getBlockState(var1).contains(Properties.WATERLOGGED)) {
-            var6 = Material.WATER.getColor().color;
+            // Water map color
+            var6 = MapColor.WATER_BLUE.color;
         }
 
         int var8 = (var6 & 0xFF0000) >> 16;
@@ -241,11 +257,15 @@ public class WaypointUtils implements IMinecraft {
         }
 
         if (var2 || var11) {
-            Material var12 = client.world.getBlockState(var1.north()).getMaterial();
-            Material var13 = client.world.getBlockState(var1.south()).getMaterial();
-            if (var12 == Material.AIR || var12 == Material.SNOW_BLOCK) {
+            // Check north/south blocks for shading
+            net.minecraft.block.BlockState northState = client.world.getBlockState(var1.north());
+            net.minecraft.block.BlockState southState = client.world.getBlockState(var1.south());
+            boolean northIsAirOrSnow = northState.isAir() || northState.isOf(Blocks.SNOW_BLOCK) || northState.isOf(Blocks.SNOW);
+            boolean southIsAirOrSnow = southState.isAir() || southState.isOf(Blocks.SNOW_BLOCK) || southState.isOf(Blocks.SNOW);
+
+            if (northIsAirOrSnow) {
                 var6 = ColorHelper.blendColor(new Color(var6, true), Color.BLACK, 0.6F).getRGB();
-            } else if (var13 == Material.AIR || var13 == Material.SNOW_BLOCK) {
+            } else if (southIsAirOrSnow) {
                 var6 = ColorHelper.blendColor(new Color(var6, true), Color.WHITE, 0.6F).getRGB();
             }
         }

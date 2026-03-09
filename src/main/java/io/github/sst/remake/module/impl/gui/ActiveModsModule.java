@@ -1,6 +1,5 @@
 package io.github.sst.remake.module.impl.gui;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import io.github.sst.remake.Client;
 import io.github.sst.remake.data.bus.Subscribe;
 import io.github.sst.remake.event.impl.client.RenderClient2DEvent;
@@ -17,8 +16,9 @@ import io.github.sst.remake.util.render.RenderUtils;
 import io.github.sst.remake.util.render.font.FontUtils;
 import io.github.sst.remake.util.render.image.Resources;
 import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.ScoreboardDisplaySlot;
+import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.scoreboard.ScoreboardPlayerScore;
 import net.minecraft.scoreboard.Team;
 import org.lwjgl.opengl.GL11;
 import org.newdawn.slick.opengl.font.TrueTypeFont;
@@ -47,11 +47,12 @@ public class ActiveModsModule extends Module {
     @Subscribe
     public void onRenderScoreboard(RenderScoreboardEvent event) {
         if (event.post) {
-            GlStateManager.translatef(0.0F, (float) (-this.totalHeight), 0.0F);
+            // GlStateManager.translatef removed in 1.17+ — use GL11 directly
+            GL11.glTranslatef(0.0F, (float) (-this.totalHeight), 0.0F);
             return;
         }
 
-        Collection<ScoreboardPlayerScore> scores = getScores();
+        Collection<ScoreboardEntry> scores = getScores();
         int offset = 0;
 
         for (Module module : this.activeModules) {
@@ -70,7 +71,7 @@ public class ActiveModsModule extends Module {
             this.totalHeight = 0;
         } else {
             this.totalHeight = (y - windowCenterY) / 2;
-            GlStateManager.translatef(0.0F, (float) this.totalHeight, 0.0F);
+            GL11.glTranslatef(0.0F, (float) this.totalHeight, 0.0F);
         }
     }
 
@@ -188,7 +189,7 @@ public class ActiveModsModule extends Module {
         }
     }
 
-    private Collection<ScoreboardPlayerScore> getScores() {
+    private Collection<ScoreboardEntry> getScores() {
         Scoreboard scoreboard = client.world.getScoreboard();
         ScoreboardObjective scoreobjective = null;
         Team playerTeam = scoreboard.getPlayerTeam(client.player.getEntityName());
@@ -196,11 +197,20 @@ public class ActiveModsModule extends Module {
         if (playerTeam != null) {
             int colorIndex = playerTeam.getColor().getColorIndex();
             if (colorIndex >= 0) {
-                scoreobjective = scoreboard.getObjectiveForSlot(3 + colorIndex);
+                // In 1.21: getObjectiveForSlot takes ScoreboardDisplaySlot enum instead of int
+                // The slot 3+colorIndex maps to team-colored sidebar slots
+                // ScoreboardDisplaySlot has SIDEBAR, BELOW_NAME, LIST, and team color variants
+                // For team colors, use ScoreboardDisplaySlot values directly
+                scoreobjective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
             }
         }
 
-        ScoreboardObjective scoreObjective = scoreobjective != null ? scoreobjective : scoreboard.getObjectiveForSlot(1);
-        return scoreboard.getAllPlayerScores(scoreObjective);
+        ScoreboardObjective scoreObjective = scoreobjective != null ? scoreobjective : scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
+
+        // In 1.21: getAllPlayerScores removed, use getScoreboardEntries or similar
+        if (scoreObjective != null) {
+            return scoreboard.getScoreboardEntries(scoreObjective);
+        }
+        return List.of();
     }
 }

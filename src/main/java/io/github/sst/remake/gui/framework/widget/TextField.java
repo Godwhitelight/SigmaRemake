@@ -133,8 +133,8 @@ public class TextField extends Widget implements IMinecraft {
         );
 
         boolean shiftHeld =
-                InputUtil.isKeyPressed(client.getWindow().getHandle(), GLFW.GLFW_KEY_LEFT_SHIFT)
-                        || InputUtil.isKeyPressed(client.getWindow().getHandle(), GLFW.GLFW_KEY_RIGHT_SHIFT);
+InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT)
+                         || InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT);
 
         if (!shiftHeld) {
             this.selectionStart = this.caretIndex;
@@ -243,7 +243,7 @@ public class TextField extends Widget implements IMinecraft {
                 break;
 
             case GLFW.GLFW_KEY_ESCAPE:
-                this.setFocused(false);
+                this.focused = false;
                 break;
 
             case GLFW.GLFW_KEY_BACKSPACE:
@@ -279,16 +279,16 @@ public class TextField extends Widget implements IMinecraft {
 
     public boolean isModifierKeyPressed() {
         long handle = client.getWindow().getHandle();
-        return InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_LEFT_CONTROL)
-                || InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_RIGHT_CONTROL)
-                || InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_LEFT_SUPER);
+return InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL)
+                || InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_RIGHT_CONTROL)
+                || InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_LEFT_SUPER);
     }
 
     @Override
     public void charTyped(char ch) {
         super.charTyped(ch);
 
-        if (!this.isFocused() || !StringUtils.isPrintableCharacter(ch)) {
+        if (!this.focused || !StringUtils.isPrintableCharacter(ch)) {
             return;
         }
 
@@ -315,7 +315,7 @@ public class TextField extends Widget implements IMinecraft {
 
         String visibleText = this.getVisibleText();
 
-        ScissorUtils.startScissor(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, true);
+        ScissorUtils.startScissor(this.x, this.y, this.x + this.width, this.y + this.height, true);
 
         int textStartX = this.x + 4;
         int textViewportWidth = this.width - 4;
@@ -324,13 +324,13 @@ public class TextField extends Widget implements IMinecraft {
                 + this.textOffsetX
                 + (float) this.font.getWidth(visibleText.substring(0, this.caretIndex));
 
-        if (this.isFocused()) {
+        if (this.focused) {
             RenderUtils.drawRoundedRect(
                     caretX + (float) (visibleText.isEmpty() ? 0 : -1),
                     (float) (this.y + this.height / 2 - this.font.getHeight(visibleText) / 2 + 2),
                     caretX + (float) (visibleText.isEmpty() ? 1 : 0),
                     (float) (this.y + this.height / 2 + this.font.getHeight(visibleText) / 2 - 1),
-                    ColorHelper.applyAlpha(this.textColor.getTextColor(), !cursorDim ? 0.1F * partialTicks : 0.8F)
+                    ColorHelper.applyAlpha(this.textColor.textColor, !cursorDim ? 0.1F * partialTicks : 0.8F)
             );
 
             float caretXNoSmooth = (float) (textStartX + this.font.getWidth(visibleText.substring(0, this.caretIndex)))
@@ -364,8 +364,8 @@ public class TextField extends Widget implements IMinecraft {
                 ColorHelper.applyAlpha(-5516546, partialTicks)
         );
 
-        FontAlignment widthAlignment = this.textColor.getWidthAlignment();
-        FontAlignment heightAlignment = this.textColor.getHeightAlignment();
+        FontAlignment widthAlignment = this.textColor.widthAlignment;
+        FontAlignment heightAlignment = this.textColor.heightAlignment;
 
         RenderUtils.drawString(
                 this.font,
@@ -373,7 +373,7 @@ public class TextField extends Widget implements IMinecraft {
                 (float) (this.y + this.height / 2),
                 visibleText.isEmpty() && (!this.focused || visibleText.length() <= 0) ? this.placeholder : visibleText,
                 ColorHelper.applyAlpha(
-                        this.textColor.getTextColor(),
+                        this.textColor.textColor,
                         (this.focusFade / 2.0F + 0.4F) * partialTicks * (this.focused && visibleText.length() > 0 ? 1.0F : 0.5F)
                 ),
                 widthAlignment,
@@ -389,7 +389,7 @@ public class TextField extends Widget implements IMinecraft {
                     (float) (this.x + this.width),
                     (float) (this.y + this.height),
                     ColorHelper.applyAlpha(
-                            this.textColor.getPrimaryColor(),
+                            this.textColor.primaryColor,
                             (this.focusFade / 2.0F + 0.5F) * partialTicks
                     )
             );
@@ -532,8 +532,8 @@ public class TextField extends Widget implements IMinecraft {
 
     private boolean isShiftPressed() {
         long handle = client.getWindow().getHandle();
-        return InputUtil.isKeyPressed(handle, GLFW_KEY_LEFT_SHIFT)
-                || InputUtil.isKeyPressed(handle, GLFW_KEY_RIGHT_SHIFT);
+return InputUtil.isKeyPressed(client.getWindow(), GLFW_KEY_LEFT_SHIFT)
+                || InputUtil.isKeyPressed(client.getWindow(), GLFW_KEY_RIGHT_SHIFT);
     }
 
     private boolean isWordBoundary(String text, int index) {

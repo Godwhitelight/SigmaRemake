@@ -4,9 +4,17 @@ import io.github.sst.remake.event.Cancellable;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.util.math.Vec3d;
 
-@RequiredArgsConstructor
+
 public class MoveEvent extends Cancellable {
-    public final Vec3d movement;
+    public Vec3d movement;
+    public boolean isOnGround;
+
+    public MoveEvent(Vec3d movement, boolean isOnGround) {
+        this.movement = movement;
+        this.isOnGround = isOnGround;
+    }
+
+
 
     public double getX() {
         return movement.x;

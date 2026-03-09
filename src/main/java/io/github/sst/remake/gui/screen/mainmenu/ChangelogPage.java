@@ -15,13 +15,12 @@ import io.github.sst.remake.util.math.vec.VecUtils;
 import io.github.sst.remake.util.render.RenderUtils;
 import io.github.sst.remake.util.render.font.FontUtils;
 import net.minecraft.util.Util;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.newdawn.slick.opengl.font.TrueTypeFont;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 
 public class ChangelogPage extends GuiComponent {
     public AnimationUtils pageAnimation = new AnimationUtils(380, 200, AnimationUtils.Direction.FORWARDS);
@@ -140,20 +139,22 @@ public class ChangelogPage extends GuiComponent {
         }
 
         try {
-            HttpEntity entity = NetUtils.getHttpClient()
-                    .execute(new HttpGet("https://jelloconnect.sigmaclient.cloud/changelog.php?v=" + Client.VERSION + "remake"))
-                    .getEntity();
+            HttpClient client = NetUtils.getHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://jelloconnect.sigmaclient.cloud/changelog.php?v=" + Client.VERSION + "remake"))
+                    .timeout(Duration.ofSeconds(14))
+                    .GET()
+                    .build();
 
-            if (entity == null) {
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            String content = response.body();
+
+            if (content == null || content.isEmpty()) {
                 return null;
             }
 
-            try (InputStream content = entity.getContent()) {
-                cachedChangelogJson = new JsonParser()
-                        .parse(IOUtils.toString(content, StandardCharsets.UTF_8))
-                        .getAsJsonArray();
-                return cachedChangelogJson;
-            }
+            cachedChangelogJson = JsonParser.parseString(content).getAsJsonArray();
+            return cachedChangelogJson;
         } catch (Exception e) {
             throw new RuntimeException("Failed to get changelog", e);
         }

@@ -14,7 +14,9 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.MovementType;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.util.PlayerInput;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec2f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -83,7 +85,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 
     @Inject(method = "move", at = @At("HEAD"), cancellable = true)
     private void injectMove(MovementType movementType, Vec3d movement, CallbackInfo ci) {
-        moveEvent = new MoveEvent(movement);
+        moveEvent = new MoveEvent(movement, this.isOnGround());
         moveEvent.call();
 
         if (moveEvent.cancelled) {
@@ -100,7 +102,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
     private void injectSendMovementPackets(CallbackInfo ci) {
         ci.cancel();
 
-        MotionEvent motionEvent = new MotionEvent(getX(), getY(), getZ(), RotationTracker.yaw, RotationTracker.pitch, onGround);
+        MotionEvent motionEvent = new MotionEvent(getX(), getY(), getZ(), RotationTracker.yaw, RotationTracker.pitch, isOnGround());
         motionEvent.call();
 
         boolean sneaking = this.isSneaking();
@@ -113,8 +115,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
         }
 
         if (sneaking != this.lastSneaking) {
-            ClientCommandC2SPacket.Mode mode = sneaking ? ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY : ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY;
-            this.networkHandler.sendPacket(new ClientCommandC2SPacket(this, mode));
+this.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerInputC2SPacket(new PlayerInput(false, false, false, false, false, true, false)));
             this.lastSneaking = sneaking;
         }
 
@@ -132,16 +133,16 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 
             if (this.hasVehicle()) {
                 Vec3d vec3d = this.getVelocity();
-                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.Both(vec3d.x, -999.0, vec3d.z, RotationTracker.yaw, RotationTracker.pitch, motionEvent.onGround));
+                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(vec3d.x, -999, vec3d.getZ(), RotationTracker.yaw, RotationTracker.pitch, this.isOnGround(), this.horizontalCollision));
                 moving = false;
             } else if (moving && looking) {
-                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.Both(motionEvent.x, motionEvent.y, motionEvent.z, RotationTracker.yaw, RotationTracker.pitch, motionEvent.onGround));
+                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(motionEvent.x, motionEvent.y, motionEvent.z, RotationTracker.yaw, RotationTracker.pitch, motionEvent.isOnGround(), false));
             } else if (moving) {
-                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionOnly(motionEvent.x, motionEvent.y, motionEvent.z, motionEvent.onGround));
+                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.Full(motionEvent.x, motionEvent.y, motionEvent.z, RotationTracker.yaw, RotationTracker.pitch, motionEvent.isOnGround(), this.horizontalCollision));
             } else if (looking) {
-                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookOnly(RotationTracker.yaw, RotationTracker.pitch, motionEvent.onGround));
-            } else if (this.lastOnGround != motionEvent.onGround) {
-                this.networkHandler.sendPacket(new PlayerMoveC2SPacket(motionEvent.onGround));
+                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(RotationTracker.yaw, RotationTracker.pitch, false, false));
+            } else if (this.lastOnGround != motionEvent.isOnGround()) {
+                this.networkHandler.sendPacket(new PlayerMoveC2SPacket.OnGroundOnly(motionEvent.isOnGround(), false));
             }
 
             if (moving) {
@@ -156,8 +157,8 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
                 this.lastPitch = RotationTracker.pitch;
             }
 
-            this.lastOnGround = motionEvent.onGround;
-            this.autoJumpEnabled = this.client.options.autoJump;
+            this.lastOnGround = motionEvent.isOnGround();
+            this.autoJumpEnabled = this.client.options.getAutoJump().getValue();
         }
 
         motionEvent.state = State.POST;

@@ -63,13 +63,13 @@ public class SnakeGameWidget extends Widget implements IMinecraft {
     @Override
     public void keyPressed(int keyCode) {
         super.keyPressed(keyCode);
-        if (keyCode == client.options.keyForward.boundKey.getCode()) {
+        if (keyCode == client.options.forwardKey.boundKey.getCode()) {
             this.gameLogic.getSnake().setDirection(SnakeDirection.UP);
-        } else if (keyCode == client.options.keyBack.boundKey.getCode()) {
+        } else if (keyCode == client.options.backKey.boundKey.getCode()) {
             this.gameLogic.getSnake().setDirection(SnakeDirection.DOWN);
-        } else if (keyCode == client.options.keyLeft.boundKey.getCode()) {
+        } else if (keyCode == client.options.leftKey.boundKey.getCode()) {
             this.gameLogic.getSnake().setDirection(SnakeDirection.LEFT);
-        } else if (keyCode == client.options.keyRight.boundKey.getCode()) {
+        } else if (keyCode == client.options.rightKey.boundKey.getCode()) {
             this.gameLogic.getSnake().setDirection(SnakeDirection.RIGHT);
         }
     }

@@ -43,7 +43,7 @@ public class TellyBlockFly extends SubModule {
     public void onEnable() {
         if (client.player == null) return;
 
-        originalHotbarSlot = client.player.inventory.selectedSlot;
+        originalHotbarSlot = client.player.getInventory().getSelectedSlot();
 
         targetYaw = NO_ROTATION_SENTINEL;
         targetPitch = NO_ROTATION_SENTINEL;
@@ -72,7 +72,7 @@ public class TellyBlockFly extends SubModule {
         MovementUtils.strafe(MovementUtils.getSpeed() * 0.9);
         setTimer(1.0f);
 
-        client.options.keySneak.setPressed(false);
+        client.options.sneakKey.setPressed(false);
     }
 
     @Subscribe
@@ -194,7 +194,7 @@ public class TellyBlockFly extends SubModule {
         double targetZ = client.player.getZ();
         double targetY = client.player.getY();
 
-        if (!client.options.keyJump.isPressed()) {
+        if (!client.options.jumpKey.isPressed()) {
             targetY = lockedY;
         }
 

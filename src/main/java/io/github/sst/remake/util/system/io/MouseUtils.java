@@ -6,19 +6,19 @@ import net.minecraft.util.hit.HitResult;
 
 public class MouseUtils implements IMinecraft {
     public static void pressLeft() {
-        pressBind(client.options.keyAttack);
+        pressBind(client.options.attackKey);
     }
 
     public static void releaseLeft() {
-        releaseBind(client.options.keyAttack);
+        releaseBind(client.options.attackKey);
     }
 
     public static void pressRight() {
-        pressBind(client.options.keyUse);
+        pressBind(client.options.useKey);
     }
 
     public static void releaseRight() {
-        releaseBind(client.options.keyUse);
+        releaseBind(client.options.useKey);
     }
 
     public static void placeBlock(HitResult hitResult) {

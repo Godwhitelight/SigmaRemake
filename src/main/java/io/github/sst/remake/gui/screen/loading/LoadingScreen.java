@@ -3,7 +3,7 @@ package io.github.sst.remake.gui.screen.loading;
 import io.github.sst.remake.util.IMinecraft;
 import io.github.sst.remake.util.render.RenderUtils;
 import net.minecraft.client.gui.screen.Overlay;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.resource.ResourceReload;
 import net.minecraft.util.Util;
 import org.lwjgl.opengl.GL11;
@@ -27,7 +27,7 @@ public class LoadingScreen extends Overlay implements IMinecraft {
     }
 
     @Override
-    public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         long nowMs = Util.getMeasuringTimeMs();
 
         if (this.isReloading

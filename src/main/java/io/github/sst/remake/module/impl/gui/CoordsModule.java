@@ -1,6 +1,5 @@
 package io.github.sst.remake.module.impl.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.sst.remake.data.bus.Priority;
 import io.github.sst.remake.data.bus.Subscribe;
 import io.github.sst.remake.event.impl.client.RenderClient2DEvent;
@@ -12,6 +11,7 @@ import io.github.sst.remake.util.math.anim.ease.EasingFunctions;
 import io.github.sst.remake.util.math.anim.ease.QuadraticEasing;
 import io.github.sst.remake.util.math.color.ClientColors;
 import io.github.sst.remake.util.math.color.ColorHelper;
+import io.github.sst.remake.util.render.RenderCompat;
 import io.github.sst.remake.util.render.RenderUtils;
 import io.github.sst.remake.util.render.font.FontAlignment;
 import io.github.sst.remake.util.render.font.FontUtils;
@@ -43,7 +43,7 @@ public class CoordsModule extends Module {
 
     @Subscribe(priority = Priority.LOWEST)
     public void onRender2D(RenderClient2DEvent event) {
-        if (client.player == null || client.options.debugEnabled || client.options.hudHidden) return;
+        if (client.player == null || client.getDebugHud().shouldShowDebugHud() || client.options.hudHidden) return;
         float animationScale = Math.min(1.0F, 0.6F + this.coordinateAnimation.calcPercent() * 2.0F);
         String coordinatesText = String.format("%.0f %.0f %.0f", client.player.getX(), client.player.getY(), client.player.getZ());
 
@@ -59,10 +59,10 @@ public class CoordsModule extends Module {
             scaleFactor *= 0.9F + EasingFunctions.easeOutBack(Math.min(1.0F, this.coordinateAnimation.calcPercent() * 7.0F), 0.0F, 1.0F, 1.0F) * 0.1F;
         }
 
-        RenderSystem.pushMatrix();
-        RenderSystem.translatef(textX, (float) (textY + 10), 0.0F);
-        RenderSystem.scalef(scaleFactor, scaleFactor, 1.0F);
-        RenderSystem.translatef(-textX, (float) (-textY - 10), 0.0F);
+        RenderCompat.pushMatrix();
+        RenderCompat.translatef(textX, (float) (textY + 10), 0.0F);
+        RenderCompat.scalef(scaleFactor, scaleFactor, 1.0F);
+        RenderCompat.translatef(-textX, (float) (-textY - 10), 0.0F);
 
         RenderUtils.drawString(FontUtils.HELVETICA_LIGHT_18_BASIC, textX, textY, coordinatesText,
                 ColorHelper.applyAlpha(-16777216, 0.5F * animationScale),
@@ -72,7 +72,7 @@ public class CoordsModule extends Module {
                 ColorHelper.applyAlpha(ClientColors.LIGHT_GREYISH_BLUE.getColor(), 0.8F * animationScale),
                 FontAlignment.CENTER, FontAlignment.LEFT);
 
-        RenderSystem.popMatrix();
+        RenderCompat.popMatrix();
     }
 
 }

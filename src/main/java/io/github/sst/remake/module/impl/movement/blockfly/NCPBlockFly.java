@@ -45,22 +45,22 @@ public class NCPBlockFly extends SubModule {
 
     @Override
     public BlockFlyModule getParent() {
-        return (BlockFlyModule) super.getParent();
+        return (BlockFlyModule) this.parent;
     }
 
     @Override
     public void onEnable() {
         if (client.player == null) return;
 
-        originalHotbarSlot = client.player.inventory.selectedSlot;
+        originalHotbarSlot = client.player.getInventory().getSelectedSlot();
         targetYaw = targetPitch = NO_ROTATION_SENTINEL;
         getParent().lastSpoofedSlot = -1;
-        if (client.options.keySneak.isPressed() && getParent().downwards.value) {
-            client.options.keySneak.setPressed(false);
+        if (client.options.sneakKey.isPressed() && getParent().downwards.value) {
+            client.options.sneakKey.setPressed(false);
             isSneakDownwards = true;
         }
 
-        if (!client.options.keySneak.isPressed()) {
+        if (!client.options.sneakKey.isPressed()) {
             isSneakDownwards = false;
         }
 
@@ -88,7 +88,7 @@ public class NCPBlockFly extends SubModule {
         if (getParent().speedMode.value.equals("Cubecraft") && groundTicksSinceLeave == 0) {
             MovementUtils.setPlayerYMotion(-0.0789);
         }
-        client.options.keySneak.setPressed(false);
+        client.options.sneakKey.setPressed(false);
     }
 
     @Subscribe
@@ -100,7 +100,7 @@ public class NCPBlockFly extends SubModule {
         }
 
         if (client.player.isOnGround()
-                && Client.INSTANCE.moduleManager.getModule(SafeWalkModule.class).isEnabled()
+                && Client.INSTANCE.moduleManager.getModule(SafeWalkModule.class).enabled
                 && (!isSneakDownwards || !getParent().downwards.value)) {
             event.setSafe(true);
         }
@@ -110,7 +110,7 @@ public class NCPBlockFly extends SubModule {
     public void onKey(KeyPressEvent event) {
         if (client.player == null) return;
 
-        if (getParent().downwards.value && event.key == client.options.keySneak.boundKey.getCode()) {
+        if (getParent().downwards.value && event.key == client.options.sneakKey.boundKey.getCode()) {
             event.cancel();
             isSneakDownwards = true;
         }
@@ -120,7 +120,7 @@ public class NCPBlockFly extends SubModule {
     public void onHover(MouseHoverEvent event) {
         if (client.player == null) return;
 
-        if (getParent().downwards.value && event.button == client.options.keySneak.boundKey.getCode()) {
+        if (getParent().downwards.value && event.button == client.options.sneakKey.boundKey.getCode()) {
             event.cancel();
             isSneakDownwards = false;
         }
@@ -161,9 +161,9 @@ public class NCPBlockFly extends SubModule {
                 break;
             case "Cubecraft":
                 double speed = 0.2;
-                float yaw = RotationUtils.getDirectionYaw(RotationUtils.normalizeYaw(client.player.yaw));
+                float yaw = RotationUtils.getDirectionYaw(RotationUtils.normalizeYaw(client.player.getYaw()));
 
-                if (client.options.keyJump.isPressed()) {
+                if (client.options.jumpKey.isPressed()) {
                     setTimer(1.0f);
                 } else if (client.player.isOnGround()) {
                     if (MovementUtils.isMoving() && !client.player.isSneaking() && !isSneakDownwards) {
@@ -262,16 +262,18 @@ public class NCPBlockFly extends SubModule {
         if (!getParent().speedMode.value.equals("Cubecraft") || groundTicksSinceLeave < 0) return;
 
         if (client.player.fallDistance > 1.2f) return;
-        if (client.player.capeY < lockedY) return;
+        if (client.player.getY() < lockedY) return;
         if (client.player.jumping) return;
 
-        client.player.getPos().y = lockedY;
+        client.player.getEntityPos().y = lockedY;
         client.player.lastRenderY = lockedY;
-        client.player.capeY = lockedY;
-        client.player.prevY = lockedY;
+        // 'capeY' is private/removed; not assignable in 1.21
+// No effect in 1.21
+        // 'prevY' is private/removed; not assignable
+// No effect in 1.21
 
         if (MovementUtils.isMoving()) {
-            client.player.strideDistance = 0.099999994f;
+            // strideDistance field is now private/inaccessible in 1.21 and cannot be set.
         }
     }
 
@@ -300,7 +302,7 @@ public class NCPBlockFly extends SubModule {
             return;
         }
 
-        if (client.player.yaw != targetYaw || client.player.pitch != targetPitch) {
+        if (client.player.getYaw() != targetYaw || client.player.getPitch() != targetPitch) {
             rotationChangeTicks = 0;
         }
 
@@ -317,7 +319,7 @@ public class NCPBlockFly extends SubModule {
         double targetZ = client.player.getZ();
         double targetY = client.player.getY();
 
-        if (!client.player.horizontalCollision && !client.options.keyJump.isPressed()) {
+        if (!client.player.horizontalCollision && !client.options.jumpKey.isPressed()) {
             double[] extended = BlockUtils.getSafeExtendedXZ(getParent().extend.value);
             targetX = extended[0];
             targetZ = extended[1];
@@ -330,22 +332,22 @@ public class NCPBlockFly extends SubModule {
         } else if (isSneakDownwards && getParent().downwards.value) {
             targetY -= 1.0;
         } else if ((getParent().speedMode.value.equals("Jump") || getParent().speedMode.value.equals("Cubecraft"))
-                && !client.options.keyJump.isPressed()) {
+                && !client.options.jumpKey.isPressed()) {
             targetY = lockedY;
         }
 
         if (!BlockUtils.isValidBlockPosition(
-                new BlockPos(
-                        client.player.getPos().getX(),
-                        client.player.getPos().getY() - 1.0,
-                        client.player.getPos().getZ()
-                )
+new BlockPos(
+            client.player.getBlockPos().getX(),
+            (int) (client.player.getEntityPos().getY() - 1.0),
+            (int) client.player.getEntityPos().getZ()
+        )
         )) {
-            targetX = client.player.getPos().getX();
-            targetZ = client.player.getPos().getZ();
+            targetX = client.player.getEntityPos().getX();
+            targetZ = client.player.getEntityPos().getZ();
         }
 
-        BlockPos belowTarget = new BlockPos(targetX, targetY - 1.0, targetZ);
+        BlockPos belowTarget = new BlockPos((int) targetX, (int) (targetY - 1.0), (int) targetZ);
 
         if (!BlockUtils.isValidBlockPosition(belowTarget) && getParent().canPlaceWithHand(placeHand)) {
             pendingPlace = BlockUtils.findPlaceableNeighbor(belowTarget, !isSneakDownwards && getParent().downwards.value);

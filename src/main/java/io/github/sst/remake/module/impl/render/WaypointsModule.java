@@ -1,6 +1,5 @@
 package io.github.sst.remake.module.impl.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.sst.remake.Client;
 import io.github.sst.remake.data.bus.Subscribe;
 import io.github.sst.remake.event.impl.game.net.ReceivePacketEvent;
@@ -13,13 +12,10 @@ import io.github.sst.remake.util.client.waypoint.Waypoint;
 import io.github.sst.remake.util.game.world.EntityUtils;
 import io.github.sst.remake.util.math.color.ClientColors;
 import io.github.sst.remake.util.render.RenderUtils;
-import net.minecraft.client.texture.TextureManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.network.packet.s2c.play.MobSpawnS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerSpawnS2CPacket;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Heightmap;
 import org.newdawn.slick.opengl.texture.TextureImpl;
@@ -79,18 +75,6 @@ public class WaypointsModule extends Module {
         if (packet instanceof EntitySpawnS2CPacket) {
             EntitySpawnS2CPacket p = (EntitySpawnS2CPacket) packet;
             this.unspawnedWaypoints.remove(p.getUuid());
-            return;
-        }
-
-        if (packet instanceof MobSpawnS2CPacket) {
-            MobSpawnS2CPacket p = (MobSpawnS2CPacket) packet;
-            this.unspawnedWaypoints.remove(p.getUuid());
-            return;
-        }
-
-        if (packet instanceof PlayerSpawnS2CPacket) {
-            PlayerSpawnS2CPacket p = (PlayerSpawnS2CPacket) packet;
-            this.unspawnedWaypoints.remove(p.getPlayerUuid());
         }
     }
 
@@ -143,9 +127,7 @@ public class WaypointsModule extends Module {
                 }
             }
 
-            RenderSystem.glMultiTexCoord2f(33986, 240.0F, 240.0F);
             TextureImpl.unbind();
-            client.getTextureManager().bindTexture(TextureManager.MISSING_IDENTIFIER);
         }
     }
 

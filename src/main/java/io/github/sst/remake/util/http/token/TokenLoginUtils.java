@@ -3,12 +3,13 @@ package io.github.sst.remake.util.http.token;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import io.github.sst.remake.Client;
-import net.minecraft.client.util.Session;
+import net.minecraft.client.session.Session;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Optional;
 
 public class TokenLoginUtils {
     private static final Gson gson = new Gson();
@@ -38,7 +39,9 @@ public class TokenLoginUtils {
                     username,
                     formattedUuid,
                     accessToken,
-                    "legacy"
+                    Optional.empty(),
+                    Optional.empty(),
+                    Session.AccountType.LEGACY
             );
         } catch (Exception e) {
             Client.LOGGER.error("Failed to verify token", e);

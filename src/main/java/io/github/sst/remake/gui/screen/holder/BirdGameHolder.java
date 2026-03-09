@@ -8,7 +8,6 @@ public class BirdGameHolder extends Screen {
         super(title);
     }
 
-    @Override
     public boolean isPauseScreen() {
         return false;
     }

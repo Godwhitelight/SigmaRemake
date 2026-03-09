@@ -3,7 +3,6 @@ package io.github.sst.remake.gui.framework.core;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.mojang.blaze3d.platform.GlStateManager;
 import io.github.sst.remake.Client;
 import io.github.sst.remake.gui.framework.event.InputListener;
 import io.github.sst.remake.gui.framework.layout.GuiComponentVisitor;
@@ -219,7 +218,7 @@ public class GuiComponent implements InputListener {
     }
 
     public void drawChildren(float partialTicks) {
-        GlStateManager.enableAlphaTest();
+        // Alpha test removed in 1.17+ (handled by shaders now)
         GL11.glAlphaFunc(519, 0.0F);
         GL11.glTranslatef((float) this.getX(), (float) this.getY(), 0.0F);
 

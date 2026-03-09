@@ -66,7 +66,7 @@ public class RotationUtils implements IMinecraft {
         float targetPitch = (float) (-(Math.atan2(dY, dist) * 180.0 / Math.PI));
 
         return new Rotation(
-                client.player.yaw + normalizeYaw(targetYaw - client.player.yaw),
+                client.player.getYaw() + normalizeYaw(targetYaw - client.player.getYaw()),
                 normalizePitch(targetPitch)
         );
     }
@@ -79,7 +79,7 @@ public class RotationUtils implements IMinecraft {
                 double yOffset = verticalIndex;
 
                 if (verticalIndex != -1) {
-                    yOffset *= target.getBoundingBox().getYLength();
+                    yOffset *= target.getBoundingBox().getLengthY();
                 } else {
                     yOffset = target.getEyeHeight(target.getPose()) - 0.02;
                 }
@@ -95,12 +95,12 @@ public class RotationUtils implements IMinecraft {
                 double dist = Math.hypot(dX, dZ);
 
                 float yaw = clamp(
-                        client.player.yaw,
+                        client.player.getYaw(),
                         (float) (Math.atan2(dZ, dX) * 180.0 / Math.PI) - 90.0f,
                         360f
                 );
                 float pitch = clamp(
-                        client.player.pitch,
+                        client.player.getPitch(),
                         (float) (-(Math.atan2(dY, dist) * 180.0 / Math.PI)),
                         360.0f
                 );
@@ -110,12 +110,12 @@ public class RotationUtils implements IMinecraft {
                 }
 
                 for (int side = -1; side < 2; side += 2) {
-                    targetX = target.getX() + (target.getX() - target.prevX) * (double) client.getTickDelta();
-                    targetZ = target.getZ() + (target.getZ() - target.prevZ) * (double) client.getTickDelta();
-                    targetY = target.getY() + 0.05 + (target.getY() - target.prevY) * (double) client.getTickDelta() + yOffset;
+                    targetX = target.getX() + (target.getX() - target.prevX) * (double) client.getRenderTickCounter().getTickDelta(true);
+                    targetZ = target.getZ() + (target.getZ() - target.prevZ) * (double) client.getRenderTickCounter().getTickDelta(true);
+                    targetY = target.getY() + 0.05 + (target.getY() - target.prevY) * (double) client.getRenderTickCounter().getTickDelta(true) + yOffset;
 
-                    double halfX = target.getBoundingBox().getXLength() / 2.5 * (double) side;
-                    double halfZ = target.getBoundingBox().getZLength() / 2.5 * (double) side;
+                    double halfX = target.getBoundingBox().getLengthX() / 2.5 * (double) side;
+                    double halfZ = target.getBoundingBox().getLengthZ() / 2.5 * (double) side;
 
                     if (client.player.getX() < targetX + halfX) {
                         if (client.player.getZ() > targetZ + halfZ) {
@@ -161,12 +161,12 @@ public class RotationUtils implements IMinecraft {
                     dist = Math.hypot(dX, dZ);
 
                     yaw = clamp(
-                            client.player.yaw,
+                            client.player.getYaw(),
                             (float) (Math.atan2(dZ, dX) * 180.0 / Math.PI) - 90.0f,
                             360.0f
                     );
                     pitch = clamp(
-                            client.player.pitch,
+                            client.player.getPitch(),
                             (float) (-(Math.atan2(dY, dist) * 180.0 / Math.PI)),
                             360.0f
                     );
@@ -184,14 +184,14 @@ public class RotationUtils implements IMinecraft {
     }
 
     public static Rotation getRotationsToVector(Vec3d target) {
-        Vec3d from = client.player.getPos().add(0.0, client.player.getEyeHeight(client.player.getPose()), 0.0);
+        Vec3d from = client.player.getX().add(0.0, client.player.getEyeHeight(client.player.getPose()), 0.0);
         return getRotationsBetween(from, target);
     }
 
     public static float[] getRotationsToEntityFrom(Entity target, double playerX, double playerY, double playerZ) {
-        double targetX = target.getX() + (target.getX() - target.lastRenderX) * client.getTickDelta();
-        double targetY = target.getY() + (target.getY() - target.lastRenderY) * client.getTickDelta();
-        double targetZ = target.getZ() + (target.getZ() - target.lastRenderZ) * client.getTickDelta();
+        double targetX = target.getX() + (target.getX() - target.lastRenderX) * client.getRenderTickCounter().getTickDelta(true);
+        double targetY = target.getY() + (target.getY() - target.lastRenderY) * client.getRenderTickCounter().getTickDelta(true);
+        double targetZ = target.getZ() + (target.getZ() - target.lastRenderZ) * client.getRenderTickCounter().getTickDelta(true);
 
         double dX = targetX - playerX;
         double dZ = targetZ - playerZ;
@@ -200,12 +200,12 @@ public class RotationUtils implements IMinecraft {
         double dist = Math.hypot(dX, dZ);
 
         float yaw = clamp(
-                client.player.yaw,
+                client.player.getYaw(),
                 (float) (Math.atan2(dZ, dX) * 180.0 / Math.PI) - 90.0F,
                 360.0F
         );
         float pitch = clamp(
-                client.player.pitch,
+                client.player.getPitch(),
                 (float) (-(Math.atan2(dY, dist) * 180.0 / Math.PI)),
                 360.0F
         );
@@ -226,7 +226,7 @@ public class RotationUtils implements IMinecraft {
                 360.0f
         );
         float pitch = clamp(
-                client.player.pitch,
+                client.player.getPitch(),
                 (float) (-(Math.atan2(dY, horizontalDistance) * 180.0 / Math.PI)),
                 360.0f
         );
@@ -237,8 +237,8 @@ public class RotationUtils implements IMinecraft {
     public static float getYawToEntityInterpolated(Entity target) {
         if (target == null || client.player == null) return 0.0f;
 
-        double targetX = target.prevX + (target.getX() - target.prevX) * client.getTickDelta();
-        double targetZ = target.prevZ + (target.getZ() - target.prevZ) * client.getTickDelta();
+        double targetX = target.prevX + (target.getX() - target.prevX) * client.getRenderTickCounter().getTickDelta(true);
+        double targetZ = target.prevZ + (target.getZ() - target.prevZ) * client.getRenderTickCounter().getTickDelta(true);
 
         double dX = targetX - client.player.getX();
         double dZ = targetZ - client.player.getZ();
@@ -296,9 +296,9 @@ public class RotationUtils implements IMinecraft {
     public static float getMovementDirectionYaw() {
         float forward = client.player.forwardSpeed;
         float strafe = client.player.sidewaysSpeed;
-        float yaw = client.player.yaw + 90.0f;
+        float yaw = client.player.getYaw() + 90.0f;
 
-        if (forward > 0.0f && client.options.keyBack.isPressed()) {
+        if (forward > 0.0f && client.options.backKey.isPressed()) {
             forward = -1.0f;
         }
 
@@ -357,7 +357,7 @@ public class RotationUtils implements IMinecraft {
     }
 
     public static float getDirectionYaw() {
-        return getDirectionYaw(client.player.input.movementForward, client.player.input.movementSideways, client.player.yaw);
+        return getDirectionYaw(client.player.input.movementForward, client.player.input.movementSideways, client.player.getYaw());
     }
 
     public static float getDirectionYaw(float yaw) {
@@ -411,7 +411,7 @@ public class RotationUtils implements IMinecraft {
     }
 
     public static float[] getDirectionArray(float forward, float strafe) {
-        float yaw = client.player.yaw + 90.0f;
+        float yaw = client.player.getYaw() + 90.0f;
 
         if (forward != 0.0f) {
             if (!(strafe >= 1.0f)) {
@@ -464,7 +464,7 @@ public class RotationUtils implements IMinecraft {
         float targetPitch =
                 (float) (-(Math.atan2(dY, dist) * 180.0 / Math.PI));
 
-        return new Rotation(client.player.yaw + normalizeYaw(targetYaw - client.player.yaw), normalizePitch(targetPitch));
+        return new Rotation(client.player.getYaw() + normalizeYaw(targetYaw - client.player.getYaw()), normalizePitch(targetPitch));
     }
 
     public static Rotation getBlockPlacementRotations(BlockPos blockPos, Direction face) {
@@ -503,7 +503,7 @@ public class RotationUtils implements IMinecraft {
         float pitch = (float) (-(Math.atan2(dY, dist) * 180.0 / Math.PI));
 
         return new Rotation(
-                client.player.yaw + normalizeYaw(yaw - client.player.yaw),
+                client.player.getYaw() + normalizeYaw(yaw - client.player.getYaw()),
                 normalizePitch(pitch)
         );
     }

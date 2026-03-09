@@ -2,13 +2,11 @@ package io.github.sst.remake.mixin;
 
 import io.github.sst.remake.tracker.impl.RotationTracker;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
-import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.render.entity.state.LivingEntityRenderState;
 import net.minecraft.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -19,21 +17,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(LivingEntityRenderer.class)
-public abstract class MixinLivingEntityRenderer<T extends LivingEntity, M extends EntityModel<T>> extends EntityRenderer<T> implements FeatureRendererContext<T, M> {
-    protected MixinLivingEntityRenderer(EntityRenderDispatcher dispatcher) {
-        super(dispatcher);
+public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> extends EntityRenderer<T, S> {
+    // In 1.21, EntityRenderer constructor takes EntityRendererFactory.Context instead of EntityRenderDispatcher
+    protected MixinLivingEntityRenderer(EntityRendererFactory.Context ctx) {
+        super(ctx);
     }
 
     @Unique
     private LivingEntity captured;
 
-    @Inject(method = "render(Lnet/minecraft/entity/LivingEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",
+    // In 1.21, the render method signature changed. LivingEntityRenderer.render now takes the render state.
+    // The updateRenderState method is where we can capture the entity.
+    // Target: updateRenderState(LivingEntity, LivingEntityRenderState, float)
+    @Inject(method = "updateRenderState(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;F)V",
             at = @At("HEAD"))
-    private void injectRender(T livingEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CallbackInfo ci) {
+    private void injectUpdateRenderState(T livingEntity, S state, float tickDelta, CallbackInfo ci) {
         captured = livingEntity;
     }
 
-    @ModifyArgs(method = "render(Lnet/minecraft/entity/LivingEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",
+    // In 1.21, the yaw/pitch interpolation still happens via MathHelper.lerpAngleDegrees/lerp calls
+    // but now inside updateRenderState rather than render. We modify them there.
+    @ModifyArgs(method = "updateRenderState(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;F)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;lerpAngleDegrees(FFF)F", ordinal = 1))
     private void modifyYawArgs(Args args) {
         if (captured instanceof ClientPlayerEntity && !RotationTracker.renderingGui) {
@@ -42,7 +46,7 @@ public abstract class MixinLivingEntityRenderer<T extends LivingEntity, M extend
         }
     }
 
-    @ModifyArgs(method = "render(Lnet/minecraft/entity/LivingEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",
+    @ModifyArgs(method = "updateRenderState(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;F)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;lerp(FFF)F", ordinal = 0))
     private void modifyPitchArgs(Args args) {
         if (captured instanceof ClientPlayerEntity && !RotationTracker.renderingGui) {

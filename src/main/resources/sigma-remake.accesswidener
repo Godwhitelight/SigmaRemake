@@ -1,28 +1,34 @@
 accessWidener v2 named
 
-accessible method net/minecraft/client/font/TextRenderer draw (Ljava/lang/String;FFILnet/minecraft/util/math/Matrix4f;ZZ)I
+# TextRenderer - draw method signature changed in 1.21
+# The old signature used Matrix4f; in 1.21 it uses DrawContext-based rendering instead.
+# This may need adjustment after Gradle sync confirms the exact method descriptor.
+# accessible method net/minecraft/client/font/TextRenderer draw (Ljava/lang/String;FFILorg/joml/Matrix4f;ZZ)I
 
 accessible field net/minecraft/client/option/KeyBinding boundKey Lnet/minecraft/client/util/InputUtil$Key;
 
-accessible field net/minecraft/client/gui/screen/SplashScreen reload Lnet/minecraft/resource/ResourceReload;
-accessible field net/minecraft/client/gui/screen/SplashScreen exceptionHandler Ljava/util/function/Consumer;
-accessible field net/minecraft/client/gui/screen/SplashScreen reloading Z
+# SplashScreen was renamed to SplashOverlay in 1.21
+accessible field net/minecraft/client/gui/screen/SplashOverlay reload Lnet/minecraft/resource/ResourceReload;
+accessible field net/minecraft/client/gui/screen/SplashOverlay exceptionHandler Ljava/util/function/Consumer;
+accessible field net/minecraft/client/gui/screen/SplashOverlay reloading Z
 
-accessible method net/minecraft/client/gui/screen/Screen addButton (Lnet/minecraft/client/gui/widget/ClickableWidget;)Lnet/minecraft/client/gui/widget/ClickableWidget;
+# Screen.addButton was removed in 1.17+ — no longer needed
+# accessible method net/minecraft/client/gui/screen/Screen addButton (Lnet/minecraft/client/gui/widget/ClickableWidget;)Lnet/minecraft/client/gui/widget/ClickableWidget;
 
-accessible method net/minecraft/client/render/GameRenderer loadShader (Lnet/minecraft/util/Identifier;)V
-accessible field net/minecraft/client/gl/ShaderEffect passes Ljava/util/List;
-
-accessible field net/minecraft/client/render/GameRenderer shader Lnet/minecraft/client/gl/ShaderEffect;
-accessible field net/minecraft/client/render/GameRenderer SHADERS_LOCATIONS [Lnet/minecraft/util/Identifier;
-accessible field net/minecraft/client/render/GameRenderer forcedShaderIndex I
+# ShaderEffect was removed in 1.21 — these are no longer needed
+# accessible method net/minecraft/client/render/GameRenderer loadShader (Lnet/minecraft/util/Identifier;)V
+# accessible field net/minecraft/client/gl/ShaderEffect passes Ljava/util/List;
+# accessible field net/minecraft/client/render/GameRenderer shader Lnet/minecraft/client/gl/ShaderEffect;
+# accessible field net/minecraft/client/render/GameRenderer SHADERS_LOCATIONS [Lnet/minecraft/util/Identifier;
+# accessible field net/minecraft/client/render/GameRenderer forcedShaderIndex I
 
 accessible field net/minecraft/client/network/AbstractClientPlayerEntity cachedScoreboardEntry Lnet/minecraft/client/network/PlayerListEntry;
 
 accessible field net/minecraft/world/dimension/DimensionType OVERWORLD Lnet/minecraft/world/dimension/DimensionType;
 
-mutable field net/minecraft/client/MinecraftClient session Lnet/minecraft/client/util/Session;
-accessible field net/minecraft/client/MinecraftClient session Lnet/minecraft/client/util/Session;
+# Session relocated from net.minecraft.client.util.Session to net.minecraft.client.session.Session in 1.21
+mutable field net/minecraft/client/MinecraftClient session Lnet/minecraft/client/session/Session;
+accessible field net/minecraft/client/MinecraftClient session Lnet/minecraft/client/session/Session;
 
 accessible field net/minecraft/client/MinecraftClient currentFps I
 
@@ -34,7 +40,9 @@ mutable field net/minecraft/util/math/ChunkPos z I
 accessible field net/minecraft/client/world/ClientChunkManager chunks Lnet/minecraft/client/world/ClientChunkManager$ClientChunkMap;
 accessible field net/minecraft/client/world/ClientChunkManager$ClientChunkMap chunks Ljava/util/concurrent/atomic/AtomicReferenceArray;
 
-accessible field net/minecraft/client/MinecraftClient renderTickCounter Lnet/minecraft/client/render/RenderTickCounter;
+accessible field net/minecraft/client/MinecraftClient renderTickCounter Lnet/minecraft/client/render/RenderTickCounter$Dynamic;
+
+accessible field net/minecraft/client/MinecraftClient overlay Lnet/minecraft/client/gui/screen/Overlay;
 
 accessible field net/minecraft/world/chunk/WorldChunk loadedToWorld Z
 

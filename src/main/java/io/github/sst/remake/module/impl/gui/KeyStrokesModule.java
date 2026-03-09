@@ -58,7 +58,7 @@ public class KeyStrokesModule extends Module {
             }
 
             String keyName = BindUtils.getKeyName(keystroke.bind.boundKey.getCode());
-            keyName = keystroke.bind == client.options.keyAttack ? "L" : keystroke.bind == client.options.keyUse ? "R" : keyName;
+            keyName = keystroke.bind == client.options.attackKey ? "L" : keystroke.bind == client.options.useKey ? "R" : keyName;
 
             RenderUtils.drawRoundedRect((float)(x + tLeft.x), (float)(y + tLeft.y), (float)(x + tLeft.x + bRight.x), (float)(y + tLeft.y + bRight.y), ColorHelper.applyAlpha(ClientColors.DEEP_TEAL.getColor(), 0.5f * tLeftOpacity));
             RenderUtils.drawRoundedRect((float)(x + tLeft.x), (float)(y + tLeft.y), (float)bRight.x, (float)bRight.y, 10.0f, 0.75f * bRightOpacity);
@@ -135,12 +135,12 @@ public class KeyStrokesModule extends Module {
     }
 
     public enum Keystroke {
-        LEFT(0.0F, 1.0F, client.options.keyLeft),
-        RIGHT(2.0F, 1.0F, client.options.keyRight),
-        FORWARD(1.0F, 0.0F, client.options.keyForward),
-        BACK(1.0F, 1.0F, client.options.keyBack),
-        ATTACK(0.0F, 2.0F, 74, client.options.keyAttack),
-        USE(1.02F, 2.0F, 73, client.options.keyUse);
+        LEFT(0.0F, 1.0F, client.options.leftKey),
+        RIGHT(2.0F, 1.0F, client.options.rightKey),
+        FORWARD(1.0F, 0.0F, client.options.forwardKey),
+        BACK(1.0F, 1.0F, client.options.backKey),
+        ATTACK(0.0F, 2.0F, 74, client.options.attackKey),
+        USE(1.02F, 2.0F, 73, client.options.useKey);
 
         public final float positionX;
         public final float positionY;
@@ -181,17 +181,17 @@ public class KeyStrokesModule extends Module {
         public KeyBinding getKeyBinding() {
             switch (this) {
                 case LEFT:
-                    return client.options.keyLeft;
+                    return client.options.leftKey;
                 case RIGHT:
-                    return client.options.keyRight;
+                    return client.options.rightKey;
                 case FORWARD:
-                    return client.options.keyForward;
+                    return client.options.forwardKey;
                 case BACK:
-                    return client.options.keyBack;
+                    return client.options.backKey;
                 case ATTACK:
-                    return client.options.keyAttack;
+                    return client.options.attackKey;
                 case USE:
-                    return client.options.keyUse;
+                    return client.options.useKey;
                 default:
                     throw new IllegalStateException();
             }

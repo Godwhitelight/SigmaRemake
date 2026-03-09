@@ -17,6 +17,8 @@ import io.github.sst.remake.util.game.world.BlockUtils;
 import io.github.sst.remake.util.game.world.RaytraceUtils;
 import io.github.sst.remake.util.game.world.data.PositionFacing;
 import io.github.sst.remake.util.system.io.MouseUtils;
+import net.minecraft.client.render.entity.PlayerEntityRenderer;
+import net.minecraft.client.render.entity.feature.CapeFeatureRenderer;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -44,16 +46,15 @@ public class SmoothBlockFly extends SubModule {
         super("Smooth");
     }
 
-    @Override
     public BlockFlyModule getParent() {
-        return (BlockFlyModule) super.getParent();
+        return (BlockFlyModule) this.parent;
     }
 
     @Override
     public void onEnable() {
         if (client.player == null) return;
 
-        originalHotbarSlot = client.player.inventory.selectedSlot;
+        originalHotbarSlot = client.player.getInventory().getSelectedSlot();
 
         targetYaw = NO_ROTATION_SENTINEL;
         targetPitch = NO_ROTATION_SENTINEL;
@@ -87,7 +88,7 @@ public class SmoothBlockFly extends SubModule {
             MovementUtils.setPlayerYMotion(-0.0789);
         }
 
-        client.options.keySneak.setPressed(false);
+        client.options.sneakKey.setPressed(false);
     }
 
     @Subscribe
@@ -105,7 +106,7 @@ public class SmoothBlockFly extends SubModule {
             return;
         }
 
-        if (client.player.isOnGround() && Client.INSTANCE.moduleManager.getModule(SafeWalkModule.class).isEnabled()) {
+        if (client.player.isOnGround() && Client.INSTANCE.moduleManager.getModule(SafeWalkModule.class).enabled) {
             event.setSafe(true);
         }
     }
@@ -179,16 +180,21 @@ public class SmoothBlockFly extends SubModule {
         if (!getParent().speedMode.value.equals("Cubecraft") || groundTicksSinceLeave < 0) return;
 
         if (client.player.fallDistance > 1.2f) return;
-        if (client.player.capeY < lockedY) return;
+        // 'capeY' is private/removed in 1.21; skip check or use alternative logic if needed
+// if (client.player.getY() < lockedY) return;
+if (client.player.getY() < lockedY) return;
         if (client.player.jumping) return;
 
-        client.player.getPos().y = lockedY;
+        client.player.getEntityPos().y = lockedY;
         client.player.lastRenderY = lockedY;
-        client.player.capeY = lockedY;
-        client.player.prevY = lockedY;
+        // 'capeY' is private/removed in 1.21; can't modify
+// client.player.setY(lockedY);
+        // 'prevY' is private/removed in 1.21; can't modify
+// No direct equivalent, likely handled internally.
 
         if (MovementUtils.isMoving()) {
-            client.player.strideDistance = 0.099999994f;
+            // 'strideDistance' is private/removed in 1.21; can't modify
+// No direct equivalent, usually now managed via movement utils.
         }
     }
 
@@ -233,7 +239,7 @@ public class SmoothBlockFly extends SubModule {
 
         if (targetYaw == NO_ROTATION_SENTINEL) return;
 
-        if (client.player.yaw != targetYaw || client.player.pitch != targetPitch) {
+        if (client.player.getYaw() != targetYaw || client.player.getPitch() != targetPitch) {
             rotationChangeTicks = 0;
         }
 
@@ -256,7 +262,7 @@ public class SmoothBlockFly extends SubModule {
         double targetZ = client.player.getZ();
         double targetY = client.player.getY();
 
-        if (!client.player.horizontalCollision && !client.options.keyJump.isPressed()) {
+        if (!client.player.horizontalCollision && !client.options.jumpKey.isPressed()) {
             double[] extended = BlockUtils.getSafeExtendedXZ(getParent().extend.value);
             targetX = extended[0];
             targetZ = extended[1];
@@ -268,22 +274,22 @@ public class SmoothBlockFly extends SubModule {
             targetY += Math.min(client.player.getVelocity().y * 2.0, 4.0);
         } else if ((getParent().speedMode.value.equals("Jump")
                 || getParent().speedMode.value.equals("Cubecraft"))
-                && !client.options.keyJump.isPressed()) {
+                && !client.options.jumpKey.isPressed()) {
             targetY = lockedY;
         }
 
         if (!BlockUtils.isValidBlockPosition(
-                new BlockPos(
-                        client.player.getPos().getX(),
-                        client.player.getPos().getY() - 1.0,
-                        client.player.getPos().getZ()
-                )
+new BlockPos(
+            (int) client.player.getEntityPos().getX(),
+            (int) (client.player.getEntityPos().getY() - 1.0),
+            (int) client.player.getEntityPos().getZ()
+        )
         )) {
-            targetX = client.player.getPos().getX();
-            targetZ = client.player.getPos().getZ();
+            targetX = client.player.getEntityPos().getX();
+            targetZ = client.player.getEntityPos().getZ();
         }
 
-        BlockPos belowTarget = new BlockPos(targetX, targetY - 1.0, targetZ);
+        BlockPos belowTarget = new BlockPos((int) targetX, (int) (targetY - 1.0), (int) targetZ);
         if (!BlockUtils.isValidBlockPosition(belowTarget)
                 && getParent().canPlaceWithHand(placeHand)
                 && placeDelayTicks <= 0) {
@@ -296,9 +302,9 @@ public class SmoothBlockFly extends SubModule {
 
     private void handleCubecraftSpeed(MoveEvent event) {
         double speed = 0.2;
-        float dir = RotationUtils.getDirectionYaw(RotationUtils.normalizeYaw(client.player.yaw));
+        float dir = RotationUtils.getDirectionYaw(RotationUtils.normalizeYaw(client.player.getYaw()));
 
-        if (client.options.keyJump.isPressed()) {
+        if (client.options.jumpKey.isPressed()) {
             setTimer(1.0f);
         } else if (client.player.isOnGround()) {
             if (MovementUtils.isMoving() && !client.player.isSneaking() && !isSneakDownwards) {

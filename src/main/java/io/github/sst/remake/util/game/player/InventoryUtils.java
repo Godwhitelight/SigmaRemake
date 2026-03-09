@@ -5,10 +5,11 @@ import io.github.sst.remake.util.game.world.BlockUtils;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.*;
-import net.minecraft.potion.PotionUtil;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.PotionContentsComponent;
+import net.minecraft.registry.Registries;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.registry.Registry;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -48,7 +49,7 @@ public class InventoryUtils implements IMinecraft {
 
     public static String resolveSelectionId(Item item, Identifier itemId) {
         if (item instanceof BlockItem && "air".equals(itemId.getPath())) {
-            return Registry.BLOCK.getKey(((BlockItem) item).getBlock()).toString();
+            return Registries.BLOCK.getKey(((BlockItem) item).getBlock()).map(key -> key.getValue().toString()).orElse(itemId.toString());
         }
         return itemId.toString();
     }
@@ -203,12 +204,15 @@ public class InventoryUtils implements IMinecraft {
 
     public static boolean hasNegativePotionEffects(ItemStack stack) {
         if (stack.getItem() instanceof PotionItem) {
-            for (StatusEffectInstance effect : PotionUtil.getPotionEffects(stack)) {
-                if (effect.getEffectType() == StatusEffects.POISON
-                        || effect.getEffectType() == StatusEffects.INSTANT_DAMAGE
-                        || effect.getEffectType() == StatusEffects.SLOWNESS
-                        || effect.getEffectType() == StatusEffects.WEAKNESS) {
-                    return true;
+            PotionContentsComponent potionContents = stack.get(DataComponentTypes.POTION_CONTENTS);
+            if (potionContents != null) {
+                for (StatusEffectInstance effect : potionContents.getEffects()) {
+                    if (effect.getEffectType().value() == StatusEffects.POISON.value()
+                            || effect.getEffectType().value() == StatusEffects.INSTANT_DAMAGE.value()
+                            || effect.getEffectType().value() == StatusEffects.SLOWNESS.value()
+                            || effect.getEffectType().value() == StatusEffects.WEAKNESS.value()) {
+                        return true;
+                    }
                 }
             }
         }

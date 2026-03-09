@@ -2,7 +2,7 @@ package io.github.sst.remake.event.impl.game.net;
 
 import io.github.sst.remake.event.Cancellable;
 import lombok.AllArgsConstructor;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 
 @AllArgsConstructor
 public class ReceivePacketEvent extends Cancellable {

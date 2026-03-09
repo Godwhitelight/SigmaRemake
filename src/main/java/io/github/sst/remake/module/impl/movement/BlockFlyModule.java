@@ -80,7 +80,7 @@ public class BlockFlyModule extends Module {
     public void onTick(ClientPlayerTickEvent event) {
         if (noSprint.value && !mode.value.name.equals("AAC")) {
             client.player.setSprinting(false);
-            client.options.keySprint.setPressed(false);
+            client.options.sprintKey.setPressed(false);
         }
 
         if (showBlockAmount.value) {
@@ -136,7 +136,7 @@ public class BlockFlyModule extends Module {
 
                         if (client.player.getY() == (double) ((int) client.player.getY())
                                 && WorldUtils.isAboveBounds(client.player, 0.001f)) {
-                            if (client.options.keyJump.isPressed()) {
+                            if (client.options.jumpKey.isPressed()) {
                                 if (!MovementUtils.isMoving()) {
                                     MovementUtils.strafe(0.0);
                                     MovementUtils.setMotion(event, 0.0);
@@ -151,7 +151,7 @@ public class BlockFlyModule extends Module {
                     case "AAC":
                         if (event.getY() > 0.247 && event.getY() < 0.249) {
                             event.setY((double) ((int) (client.player.getY() + event.getY())) - client.player.getY());
-                            if (client.options.keyJump.isPressed() && !MovementUtils.isMoving()) {
+                            if (client.options.jumpKey.isPressed() && !MovementUtils.isMoving()) {
                                 MovementUtils.strafe(0.0);
                                 MovementUtils.setMotion(event, 0.0);
                             }
@@ -162,7 +162,7 @@ public class BlockFlyModule extends Module {
                         break;
 
                     case "Vanilla":
-                        if (client.options.keyJump.isPressed()
+                        if (client.options.jumpKey.isPressed()
                                 && WorldUtils.isAboveBounds(client.player, 0.001f)
                                 && !client.world.getBlockCollisions(client.player, client.player.getBoundingBox().offset(0.0, 1.0, 0.0)).findAny().isPresent()) {
                             client.player.setPosition(client.player.getX(), client.player.getY() + 1.0, client.player.getZ());
@@ -174,11 +174,11 @@ public class BlockFlyModule extends Module {
             }
         } else if (!towerMode.value.equals("AAC")
                 || !WorldUtils.isAboveBounds(client.player, 0.001f)
-                || !client.options.keyJump.isPressed()) {
+                || !client.options.jumpKey.isPressed()) {
             if (!towerMode.value.equals("NCP")
                     && !towerMode.value.equals("Vanilla")
                     && WorldUtils.isAboveBounds(client.player, 0.001f)
-                    && client.options.keyJump.isPressed()) {
+                    && client.options.jumpKey.isPressed()) {
                 client.player.jumpingCooldown = 20;
                 event.setY(MovementUtils.getJumpValue());
             }
@@ -208,11 +208,11 @@ public class BlockFlyModule extends Module {
                 continue;
             }
 
-            if (client.player.inventory.selectedSlot == hotbarIndex) {
+            if (client.player.getInventory().getSelectedSlot() == hotbarIndex) {
                 return;
             }
 
-            client.player.inventory.selectedSlot = hotbarIndex;
+            client.player.getInventory().getSelectedSlot() = hotbarIndex;
 
             if (itemSpoofMode.value.equals("LiteSpoof")
                     && (lastSpoofedSlot < 0 || lastSpoofedSlot != hotbarIndex)) {
@@ -387,11 +387,11 @@ public class BlockFlyModule extends Module {
 
     public void handleDisableSlotSpoof(int originalHotbarSlot) {
         if (originalHotbarSlot != -1 && itemSpoofMode.value.equals("Switch")) {
-            client.player.inventory.selectedSlot = originalHotbarSlot;
+            client.player.getInventory().getSelectedSlot() = originalHotbarSlot;
         }
 
         if (lastSpoofedSlot >= 0) {
-            client.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(client.player.inventory.selectedSlot));
+            client.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(client.player.getInventory().getSelectedSlot()));
             lastSpoofedSlot = -1;
         }
     }
@@ -414,7 +414,7 @@ public class BlockFlyModule extends Module {
     }
 
     public void spoofAndPlace(HitResult result) {
-        int previousSlot = client.player.inventory.selectedSlot;
+        int previousSlot = client.player.getInventory().getSelectedSlot();
         if (!itemSpoofMode.value.equals("None")) {
             selectPlaceableHotbarSlot();
         }
@@ -423,12 +423,12 @@ public class BlockFlyModule extends Module {
 
         String spoofMode = itemSpoofMode.value;
         if (spoofMode.equals("Spoof") || spoofMode.equals("LiteSpoof")) {
-            client.player.inventory.selectedSlot = previousSlot;
+            client.player.getInventory().getSelectedSlot() = previousSlot;
         }
     }
 
     public void interactBlockWithSpoofing(Hand hand, BlockHitResult hit) {
-        int previousSlot = client.player.inventory.selectedSlot;
+        int previousSlot = client.player.getInventory().getSelectedSlot();
         if (!itemSpoofMode.value.equals("None")) {
             selectPlaceableHotbarSlot();
         }
@@ -437,7 +437,7 @@ public class BlockFlyModule extends Module {
 
         String spoofMode = itemSpoofMode.value;
         if (spoofMode.equals("Spoof") || spoofMode.equals("LiteSpoof")) {
-            client.player.inventory.selectedSlot = previousSlot;
+            client.player.getInventory().getSelectedSlot() = previousSlot;
         }
     }
 

@@ -1,12 +1,10 @@
 {
   "required": true,
   "package": "io.github.sst.remake.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_21",
   "mixins": [
     "MixinClientConnection",
     "MixinClientStatusC2SPacketMode",
-    "MixinConfirmScreenActionC2SPacket",
-    "MixinConfirmScreenActionS2CPacket",
     "MixinEntity",
     "MixinLivingEntity",
     "MixinPlayerEntity"

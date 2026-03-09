@@ -6,25 +6,32 @@ import com.jfposton.ytdlp.YtDlpRequest;
 import com.jfposton.ytdlp.YtDlpResponse;
 import io.github.sst.remake.Client;
 import io.github.sst.remake.util.client.ConfigUtils;
-import io.github.sst.remake.util.http.NetUtils;
 import io.github.sst.remake.util.system.io.FileUtils;
 import io.github.sst.remake.util.java.RandomUtils;
 import io.github.sst.remake.util.java.StringUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.impl.client.CloseableHttpClient;
 
 import java.io.*;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 
 public class YtDlpUtils {
     private static volatile boolean prepared = false;
     private static volatile String prepareError = null;
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(14))
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .build();
+
+    private static final HttpClient DOWNLOAD_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
 
     public static boolean isPrepared() {
         return prepared;
@@ -117,14 +124,10 @@ public class YtDlpUtils {
         }
 
         String latestBaseUrl = null;
-        CloseableHttpClient httpClient = null;
         try {
-            httpClient = NetUtils.getHttpClient();
-            latestBaseUrl = resolveLatestAssetBaseUrl(httpClient, assetName);
-        } catch (IOException e) {
+            latestBaseUrl = resolveLatestAssetBaseUrl(assetName);
+        } catch (Exception e) {
             Client.LOGGER.warn("Failed to resolve latest YT-DLP asset URL (will fallback to current file if present)", e);
-        } finally {
-            RandomUtils.closeQuietly(httpClient);
         }
 
         boolean needsDownload = !targetFile.exists();
@@ -178,65 +181,54 @@ public class YtDlpUtils {
     private static boolean downloadYtDlp(File targetFile, String assetName) {
         String downloadUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/" + assetName;
 
-        CloseableHttpClient client = null;
-        CloseableHttpResponse response = null;
         try {
-            client = NetUtils.getHttpClient();
-            HttpGet request = new HttpGet(downloadUrl);
-            response = client.execute(request);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(downloadUrl))
+                    .timeout(Duration.ofSeconds(60))
+                    .GET()
+                    .build();
 
-            HttpEntity entity = response.getEntity();
-            if (entity == null) {
-                Client.LOGGER.error("Failed to download YT-DLP: empty response entity");
+            HttpResponse<InputStream> response = DOWNLOAD_CLIENT.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
+            if (response.statusCode() != 200) {
+                Client.LOGGER.error("Failed to download YT-DLP: HTTP {}", response.statusCode());
                 return false;
             }
 
-            FileOutputStream outputStream = null;
-            try {
-                outputStream = new FileOutputStream(targetFile);
-                entity.writeTo(outputStream);
-            } finally {
-                RandomUtils.closeQuietly(outputStream);
+            try (InputStream body = response.body();
+                 FileOutputStream outputStream = new FileOutputStream(targetFile)) {
+                body.transferTo(outputStream);
             }
             return true;
-        } catch (IOException e) {
+        } catch (Exception e) {
             Client.LOGGER.error("Failed to download YT-DLP", e);
             return false;
-        } finally {
-            RandomUtils.closeQuietly(response);
-            RandomUtils.closeQuietly(client);
         }
     }
 
-    private static String resolveLatestAssetBaseUrl(CloseableHttpClient client, String assetName) throws IOException {
+    private static String resolveLatestAssetBaseUrl(String assetName) throws Exception {
         String url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/" + assetName;
 
-        RequestConfig noRedirects = RequestConfig.custom()
-                .setRedirectsEnabled(false)
-                .build();
-
         for (int i = 0; i < 10; i++) {
-            HttpHead head = new HttpHead(url);
-            head.setConfig(noRedirects);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                    .timeout(Duration.ofSeconds(10))
+                    .build();
 
-            CloseableHttpResponse response = null;
-            try {
-                response = client.execute(head);
-                int code = response.getStatusLine().getStatusCode();
+            HttpResponse<Void> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.discarding());
+            int code = response.statusCode();
 
-                if (code >= 300 && code < 400) {
-                    Header location = response.getFirstHeader("Location");
-                    if (location == null) {
-                        break;
-                    }
-                    url = location.getValue();
-                    continue;
+            if (code >= 300 && code < 400) {
+                java.util.Optional<String> location = response.headers().firstValue("Location");
+                if (location.isEmpty()) {
+                    break;
                 }
-
-                return StringUtils.stripQuery(url);
-            } finally {
-                RandomUtils.closeQuietly(response);
+                url = location.get();
+                continue;
             }
+
+            return StringUtils.stripQuery(url);
         }
 
         return StringUtils.stripQuery(url);

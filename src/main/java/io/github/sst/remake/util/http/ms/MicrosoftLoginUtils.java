@@ -3,45 +3,50 @@ package io.github.sst.remake.util.http.ms;
 import com.google.gson.*;
 import com.sun.net.httpserver.HttpServer;
 import io.github.sst.remake.util.http.NetUtils;
-import net.minecraft.client.util.Session;
+import net.minecraft.client.session.Session;
 import net.minecraft.util.Util;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public final class MicrosoftLoginUtils {
-    public static final RequestConfig REQUEST_CONFIG = RequestConfig
-            .custom()
-            .setConnectionRequestTimeout(30_000)
-            .setConnectTimeout(30_000)
-            .setSocketTimeout(30_000)
-            .build();
+    private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
     public static final String CLIENT_ID = "42a60a84-599d-44b2-a7c6-b00cdef1d6a2";
     public static final int PORT = 25575;
+
+    private static String formEncode(Map<String, String> params) {
+        return params.entrySet().stream()
+                .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                .collect(Collectors.joining("&"));
+    }
+
+    private static Map<String, String> parseQuery(String query) {
+        if (query == null || query.isEmpty()) return Collections.emptyMap();
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String pair : query.split("&")) {
+            int idx = pair.indexOf('=');
+            if (idx >= 0) {
+                String key = java.net.URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
+                String value = java.net.URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
+                map.put(key, value);
+            }
+        }
+        return map;
+    }
 
     public static CompletableFuture<String> acquireMSAuthCode(
             final Executor executor
@@ -66,13 +71,13 @@ public final class MicrosoftLoginUtils {
                         errorMsg = new AtomicReference<>(null);
 
                 server.createContext("/callback", exchange -> {
-                    final Map<String, String> query = URLEncodedUtils
-                            .parse(
-                                    exchange.getRequestURI().toString().replaceAll("/callback\\?", ""),
-                                    StandardCharsets.UTF_8
-                            )
-                            .stream()
-                            .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
+                    String rawQuery = exchange.getRequestURI().getQuery();
+                    if (rawQuery == null) {
+                        String fullUri = exchange.getRequestURI().toString();
+                        int qIdx = fullUri.indexOf('?');
+                        if (qIdx >= 0) rawQuery = fullUri.substring(qIdx + 1);
+                    }
+                    final Map<String, String> query = parseQuery(rawQuery);
 
                     if (!state.equals(query.get("state"))) {
                         errorMsg.set(
@@ -103,14 +108,15 @@ public final class MicrosoftLoginUtils {
                     NetUtils.sendClasspathResource(exchange, path, MicrosoftLoginUtils.class);
                 });
 
-                final URIBuilder uriBuilder = new URIBuilder("https://login.live.com/oauth20_authorize.srf")
-                        .addParameter("client_id", CLIENT_ID)
-                        .addParameter("response_type", "code")
-                        .addParameter("redirect_uri", String.format("http://localhost:%d/callback", server.getAddress().getPort()))
-                        .addParameter("scope", "XboxLive.signin XboxLive.offline_access")
-                        .addParameter("state", state)
-                        .addParameter("prompt", "select_account");
-                final URI uri = uriBuilder.build();
+                String redirectUri = String.format("http://localhost:%d/callback", server.getAddress().getPort());
+                Map<String, String> authParams = new LinkedHashMap<>();
+                authParams.put("client_id", CLIENT_ID);
+                authParams.put("response_type", "code");
+                authParams.put("redirect_uri", redirectUri);
+                authParams.put("scope", "XboxLive.signin XboxLive.offline_access");
+                authParams.put("state", state);
+                authParams.put("prompt", "select_account");
+                final URI uri = URI.create("https://login.live.com/oauth20_authorize.srf?" + formEncode(authParams));
 
                 browserAction.accept(uri);
 
@@ -147,25 +153,25 @@ public final class MicrosoftLoginUtils {
             final Executor executor
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            try (CloseableHttpClient client = HttpClients.createMinimal()) {
-                final HttpPost request = new HttpPost(URI.create("https://login.live.com/oauth20_token.srf"));
-                request.setConfig(REQUEST_CONFIG);
-                request.setHeader("Content-Type", "application/x-www-form-urlencoded");
-                request.setEntity(new UrlEncodedFormEntity(
-                        Arrays.asList(
-                                new BasicNameValuePair("client_id", CLIENT_ID),
-                                new BasicNameValuePair("grant_type", "authorization_code"),
-                                new BasicNameValuePair("code", authCode),
-                                new BasicNameValuePair(
-                                        "redirect_uri", String.format("http://localhost:%d/callback", PORT)
-                                )
-                        ),
-                        "UTF-8"
-                ));
+            try {
+                HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
 
-                final org.apache.http.HttpResponse res = client.execute(request);
+                Map<String, String> form = new LinkedHashMap<>();
+                form.put("client_id", CLIENT_ID);
+                form.put("grant_type", "authorization_code");
+                form.put("code", authCode);
+                form.put("redirect_uri", String.format("http://localhost:%d/callback", PORT));
 
-                final JsonObject json = new JsonParser().parse(EntityUtils.toString(res.getEntity())).getAsJsonObject();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://login.live.com/oauth20_token.srf"))
+                        .timeout(TIMEOUT)
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(formEncode(form)))
+                        .build();
+
+                HttpResponse<String> res = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                final JsonObject json = JsonParser.parseString(res.body()).getAsJsonObject();
                 return Optional.ofNullable(json.get("access_token"))
                         .map(JsonElement::getAsString)
                         .filter(token -> !StringUtils.isBlank(token))
@@ -189,8 +195,9 @@ public final class MicrosoftLoginUtils {
             final Executor executor
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            try (CloseableHttpClient client = HttpClients.createMinimal()) {
-                final HttpPost request = new HttpPost(URI.create("https://user.auth.xboxlive.com/user/authenticate"));
+            try {
+                HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
+
                 final JsonObject entity = new JsonObject();
                 final JsonObject properties = new JsonObject();
                 properties.addProperty("AuthMethod", "RPS");
@@ -199,14 +206,18 @@ public final class MicrosoftLoginUtils {
                 entity.add("Properties", properties);
                 entity.addProperty("RelyingParty", "http://auth.xboxlive.com");
                 entity.addProperty("TokenType", "JWT");
-                request.setConfig(REQUEST_CONFIG);
-                request.setHeader("Content-Type", "application/json");
-                request.setEntity(new StringEntity(entity.toString()));
 
-                final org.apache.http.HttpResponse res = client.execute(request);
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://user.auth.xboxlive.com/user/authenticate"))
+                        .timeout(TIMEOUT)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(entity.toString()))
+                        .build();
 
-                final JsonObject json = res.getStatusLine().getStatusCode() == 200
-                        ? new JsonParser().parse(EntityUtils.toString(res.getEntity())).getAsJsonObject()
+                HttpResponse<String> res = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                final JsonObject json = res.statusCode() == 200
+                        ? JsonParser.parseString(res.body()).getAsJsonObject()
                         : new JsonObject();
                 return Optional.ofNullable(json.get("Token"))
                         .map(JsonElement::getAsString)
@@ -229,9 +240,9 @@ public final class MicrosoftLoginUtils {
             final Executor executor
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            try (CloseableHttpClient client = HttpClients.createMinimal()) {
-                // Build a new HTTP request
-                final HttpPost request = new HttpPost("https://xsts.auth.xboxlive.com/xsts/authorize");
+            try {
+                HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
+
                 final JsonObject entity = new JsonObject();
                 final JsonObject properties = new JsonObject();
                 final JsonArray userTokens = new JsonArray();
@@ -241,14 +252,18 @@ public final class MicrosoftLoginUtils {
                 entity.add("Properties", properties);
                 entity.addProperty("RelyingParty", "rp://api.minecraftservices.com/");
                 entity.addProperty("TokenType", "JWT");
-                request.setConfig(REQUEST_CONFIG);
-                request.setHeader("Content-Type", "application/json");
-                request.setEntity(new StringEntity(entity.toString()));
 
-                final org.apache.http.HttpResponse res = client.execute(request);
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://xsts.auth.xboxlive.com/xsts/authorize"))
+                        .timeout(TIMEOUT)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(entity.toString()))
+                        .build();
 
-                final JsonObject json = res.getStatusLine().getStatusCode() == 200
-                        ? new JsonParser().parse(EntityUtils.toString(res.getEntity())).getAsJsonObject()
+                HttpResponse<String> res = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                final JsonObject json = res.statusCode() == 200
+                        ? JsonParser.parseString(res.body()).getAsJsonObject()
                         : new JsonObject();
                 return Optional.ofNullable(json.get("Token"))
                         .map(JsonElement::getAsString)
@@ -283,17 +298,21 @@ public final class MicrosoftLoginUtils {
             final Executor executor
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            try (CloseableHttpClient client = HttpClients.createMinimal()) {
-                final HttpPost request = new HttpPost(URI.create("https://api.minecraftservices.com/authentication/login_with_xbox"));
-                request.setConfig(REQUEST_CONFIG);
-                request.setHeader("Content-Type", "application/json");
-                request.setEntity(new StringEntity(
-                        String.format("{\"identityToken\": \"XBL3.0 x=%s;%s\"}", userHash, xstsToken)
-                ));
+            try {
+                HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
 
-                final org.apache.http.HttpResponse res = client.execute(request);
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://api.minecraftservices.com/authentication/login_with_xbox"))
+                        .timeout(TIMEOUT)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(
+                                String.format("{\"identityToken\": \"XBL3.0 x=%s;%s\"}", userHash, xstsToken)
+                        ))
+                        .build();
 
-                final JsonObject json = new JsonParser().parse(EntityUtils.toString(res.getEntity())).getAsJsonObject();
+                HttpResponse<String> res = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                final JsonObject json = JsonParser.parseString(res.body()).getAsJsonObject();
 
                 return Optional.ofNullable(json.get("access_token"))
                         .map(JsonElement::getAsString)
@@ -316,14 +335,19 @@ public final class MicrosoftLoginUtils {
             final Executor executor
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            try (CloseableHttpClient client = HttpClients.createMinimal()) {
-                final HttpGet request = new HttpGet(URI.create("https://api.minecraftservices.com/minecraft/profile"));
-                request.setConfig(REQUEST_CONFIG);
-                request.setHeader("Authorization", "Bearer " + mcToken);
+            try {
+                HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
 
-                final org.apache.http.HttpResponse res = client.execute(request);
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://api.minecraftservices.com/minecraft/profile"))
+                        .timeout(TIMEOUT)
+                        .header("Authorization", "Bearer " + mcToken)
+                        .GET()
+                        .build();
 
-                final JsonObject json = new JsonParser().parse(EntityUtils.toString(res.getEntity())).getAsJsonObject();
+                HttpResponse<String> res = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                final JsonObject json = JsonParser.parseString(res.body()).getAsJsonObject();
                 return Optional.ofNullable(json.get("id"))
                         .map(JsonElement::getAsString)
                         .filter(uuid -> !StringUtils.isBlank(uuid))
@@ -331,7 +355,9 @@ public final class MicrosoftLoginUtils {
                                 json.get("name").getAsString(),
                                 uuid,
                                 mcToken,
-                                Session.AccountType.MOJANG.toString()
+                                Optional.empty(),
+                                Optional.empty(),
+                                Session.AccountType.MSA
                         ))
                         .orElseThrow(() -> new Exception(
                                 json.has("error") ? String.format(

@@ -5,11 +5,13 @@ import com.google.gson.GsonBuilder;
 import io.github.sst.remake.util.http.SkinUtils;
 import io.github.sst.remake.util.render.image.Resources;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.Session;
+import net.minecraft.client.session.Session;
 import org.newdawn.slick.opengl.texture.Texture;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public class Account {
     public static final String STEVE_UUID = "c06f8906-4c8a-4911-9c29-ea1dbd1aab82";
@@ -105,7 +107,13 @@ public class Account {
     }
 
     public Session toSession() {
-        return new Session(this.name, this.uuid, this.token, Session.AccountType.LEGACY.name());
+        UUID uuidObj;
+        try {
+            uuidObj = UUID.fromString(this.uuid);
+        } catch (IllegalArgumentException e) {
+            uuidObj = UUID.nameUUIDFromBytes(this.uuid.getBytes());
+        }
+        return new Session(this.name, uuidObj, this.token, Optional.empty(), Optional.empty());
     }
 
     public void setTokenValidation(boolean invalidToken, String tokenValidationMessage) {

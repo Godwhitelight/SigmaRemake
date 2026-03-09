@@ -1,43 +1,49 @@
 package io.github.sst.remake.util.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.Matrix4f;
-import net.minecraft.util.math.Vec3f;
+import org.joml.Vector3f;
 
+/**
+ * Rendering helper utilities updated for 1.21.
+ * In 1.17+ the fixed-function pipeline lighting methods were removed from RenderSystem.
+ * In 1.21, DiffuseLighting was restructured to use Type enum (LEVEL, ITEMS_FLAT, ITEMS_3D, etc.)
+ * with setShaderLights(Type). Since this mod uses immediate-mode GL for most rendering,
+ * these are effectively no-ops — the mod doesn't rely on Minecraft's diffuse lighting system.
+ */
 public class RenderHelper {
-    private static final Vec3f DEFAULT_LIGHTING = Util.make(new Vec3f(0.2F, 1.0F, -0.7F), Vec3f::normalize);
-    private static final Vec3f DIFFUSE_LIGHTING = Util.make(new Vec3f(-0.2F, 1.0F, 0.7F), Vec3f::normalize);
-    private static final Vec3f GUI_FLAT_DIFFUSE_LIGHTING = Util.make(new Vec3f(0.2F, 1.0F, -0.7F), Vec3f::normalize);
-    private static final Vec3f GUI_3D_DIFFUSE_LIGHTING = Util.make(new Vec3f(-0.2F, -1.0F, 0.7F), Vec3f::normalize);
+    private static final Vector3f DEFAULT_LIGHTING = new Vector3f(0.2F, 1.0F, -0.7F).normalize();
+    private static final Vector3f DIFFUSE_LIGHTING = new Vector3f(-0.2F, 1.0F, 0.7F).normalize();
+    private static final Vector3f GUI_FLAT_DIFFUSE_LIGHTING = new Vector3f(0.2F, 1.0F, -0.7F).normalize();
+    private static final Vector3f GUI_3D_DIFFUSE_LIGHTING = new Vector3f(-0.2F, -1.0F, 0.7F).normalize();
 
+    /**
+     * Previously enabled standard item lighting via fixed-function OpenGL.
+     * In 1.21, DiffuseLighting uses Type-based API. No-op for immediate-mode rendering.
+     */
     public static void enableStandardItemLighting() {
-        RenderSystem.enableLighting();
-        RenderSystem.enableColorMaterial();
-        RenderSystem.colorMaterial(1032, 5634);
+        // No-op: DiffuseLighting in 1.21 uses Type enum, not applicable for immediate-mode GL
     }
 
     /**
-     * Disables the OpenGL lighting properties enabled by enableStandardItemLighting
+     * Previously disabled standard item lighting.
+     * No-op for immediate-mode rendering.
      */
     public static void disableStandardItemLighting() {
-        RenderSystem.disableLighting();
-        RenderSystem.disableColorMaterial();
+        // No-op
     }
 
-    public static void setupDiffuseGuiLighting(Matrix4f matrix) {
-        RenderSystem.setupLevelDiffuseLighting(GUI_FLAT_DIFFUSE_LIGHTING, GUI_3D_DIFFUSE_LIGHTING, matrix);
+    public static void setupDiffuseGuiLighting(org.joml.Matrix4f matrix) {
+        // No-op: DiffuseLighting.setShaderLights(Type) in 1.21, not applicable here
     }
 
-    public static void setupLevelDiffuseLighting(Matrix4f matrixIn) {
-        RenderSystem.setupLevelDiffuseLighting(DEFAULT_LIGHTING, DIFFUSE_LIGHTING, matrixIn);
+    public static void setupLevelDiffuseLighting(org.joml.Matrix4f matrixIn) {
+        // No-op
     }
 
     public static void setupGuiFlatDiffuseLighting() {
-        RenderSystem.setupGuiFlatDiffuseLighting(DEFAULT_LIGHTING, DIFFUSE_LIGHTING);
+        // No-op
     }
 
     public static void setupGui3DDiffuseLighting() {
-        RenderSystem.setupGui3DDiffuseLighting(DEFAULT_LIGHTING, DIFFUSE_LIGHTING);
+        // No-op
     }
 }

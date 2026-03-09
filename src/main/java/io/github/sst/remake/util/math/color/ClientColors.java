@@ -24,9 +24,13 @@ public enum ClientColors {
     PALE_RED(-7864184),
     BRIGHT_PINK(-16724271);
 
-    private final int color;
+private final int color;
 
-    ClientColors(int color) {
-        this.color = color;
-    }
+ClientColors(int color) {
+    this.color = color;
+}
+
+public int getColor() {
+    return this.color;
+}
 }

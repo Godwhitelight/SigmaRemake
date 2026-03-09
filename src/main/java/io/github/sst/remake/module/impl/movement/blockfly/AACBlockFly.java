@@ -54,7 +54,7 @@ public class AACBlockFly extends SubModule{
     public void onEnable() {
         if (client.player == null) return;
 
-        originalHotbarSlot = client.player.inventory.selectedSlot;
+        originalHotbarSlot = client.player.getInventory().getSelectedSlot();
         targetYaw = NO_ROTATION_SENTINEL;
         targetPitch = NO_ROTATION_SENTINEL;
 
@@ -113,7 +113,7 @@ public class AACBlockFly extends SubModule{
     @Subscribe
     public void onMove(MoveEvent event) {
         if (!haphe.value) {
-            client.options.keySprint.setPressed(false);
+            client.options.sprintKey.setPressed(false);
             client.player.setSprinting(false);
         }
 

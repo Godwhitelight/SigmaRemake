@@ -8,7 +8,6 @@ public class SnakeGameHolder extends Screen {
         super(title);
     }
 
-    @Override
     public boolean isPauseScreen() {
         return false;
     }
